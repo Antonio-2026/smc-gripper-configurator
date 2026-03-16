@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMC Gripper Configurator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <div>
+        <p class="eyebrow">SMC Industrial Automation</p>
+        <h1>Collaborative Gripper Configurator</h1>
+      </div>
+      <p class="subtitle">
+        Match cobot payload profiles with pneumatic grippers and visualize a
+        safe gripping envelope.
+      </p>
+    </header>
+
+    <main class="layout-grid">
+      <section>
+        <div class="section-title-row">
+          <h2>1. Select Robot</h2>
+          <span class="chip">Payload + Reach</span>
+        </div>
+        <div id="robotCards" class="card-grid"></div>
+      </section>
+
+      <section>
+        <div class="section-title-row">
+          <h2>2. Select Gripper</h2>
+          <span class="chip">Force + Mass</span>
+        </div>
+        <div id="gripperCards" class="card-grid"></div>
+      </section>
+
+      <section class="envelope-panel">
+        <div class="section-title-row">
+          <h2>3. Grip Envelope</h2>
+          <span class="chip">Mass vs Force</span>
+        </div>
+        <p class="helper-text">
+          The green region indicates compatible payload and gripping force
+          combinations for the selected robot and gripper.
+        </p>
+        <svg id="envelopeGraph" viewBox="0 0 760 380" aria-label="Envelope graph"></svg>
+      </section>
+
+      <aside class="selection-summary">
+        <h3>Configuration Summary</h3>
+        <dl>
+          <div>
+            <dt>Robot</dt>
+            <dd id="summaryRobot">—</dd>
+          </div>
+          <div>
+            <dt>Gripper</dt>
+            <dd id="summaryGripper">—</dd>
+          </div>
+          <div>
+            <dt>Available payload</dt>
+            <dd id="summaryPayload">—</dd>
+          </div>
+          <div>
+            <dt>Nominal grip force</dt>
+            <dd id="summaryForce">—</dd>
+          </div>
+          <div>
+            <dt>Safety margin</dt>
+            <dd id="summaryMargin">—</dd>
+          </div>
+        </dl>
+      </aside>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
