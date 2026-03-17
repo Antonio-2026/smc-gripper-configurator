@@ -37,6 +37,13 @@ const recommendationEl = document.getElementById("recommendation");
 const comparisonTableBodyEl = document.getElementById("comparisonTableBody");
 const parallelModeEl = document.getElementById("parallelMode");
 const gripperCountEl = document.getElementById("gripperCount");
+const workpieceShapeEl = document.getElementById("workpieceShape");
+const rectangularDimensionsEl = document.getElementById("rectangularDimensions");
+const cylindricalDimensionsEl = document.getElementById("cylindricalDimensions");
+const widthEl = document.getElementById("width");
+const heightEl = document.getElementById("height");
+const diameterEl = document.getElementById("diameter");
+const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
 
 const chart = new Chart(document.getElementById("forceChart"), {
   type: "bar",
@@ -71,6 +78,10 @@ const chart = new Chart(document.getElementById("forceChart"), {
 
 function getInputs() {
   return {
+    workpieceShape: workpieceShapeEl.value,
+    width: Number(widthEl.value),
+    height: Number(heightEl.value),
+    diameter: Number(diameterEl.value),
     mass: Number(document.getElementById("mass").value),
     friction: Number(document.getElementById("friction").value),
     safetyFactor: Number(document.getElementById("safetyFactor").value),
@@ -80,6 +91,25 @@ function getInputs() {
     parallelMode: parallelModeEl.value,
     gripperCount: Number(gripperCountEl.value),
   };
+}
+
+function getCompatibleGrippers(workpieceShape) {
+  if (workpieceShape === "cylindrical") {
+    return grippers.filter((gripper) => gripper.fingers === 3);
+  }
+
+  return grippers.filter((gripper) => gripper.fingers === 2);
+}
+
+function syncGeometryFields() {
+  const isCylindrical = workpieceShapeEl.value === "cylindrical";
+
+  rectangularDimensionsEl.classList.toggle("is-hidden", isCylindrical);
+  cylindricalDimensionsEl.classList.toggle("is-hidden", !isCylindrical);
+
+  widthEl.disabled = isCylindrical;
+  heightEl.disabled = isCylindrical;
+  diameterEl.disabled = !isCylindrical;
 }
 
 function getPerFingerForce(gripper, mode) {
@@ -110,10 +140,10 @@ function calculateForGripper(gripper, values) {
   };
 }
 
-function renderCards(bestModel) {
+function renderCards(availableGrippers, bestModel) {
   gripperCardsEl.innerHTML = "";
 
-  grippers.forEach((gripper) => {
+  availableGrippers.forEach((gripper) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "gripper-card";
@@ -213,17 +243,34 @@ function setNoSelectionState() {
 function updateUI() {
   const values = getInputs();
 
-  if (values.friction <= 0 || values.pressure <= 0) {
+  if (values.friction <= 0 || values.pressure <= 0 || values.mass < 0) {
     return;
+  }
+
+  const invalidRectangularDimensions =
+    values.workpieceShape !== "cylindrical" && (values.width <= 0 || values.height <= 0);
+  const invalidCylindricalDimension = values.workpieceShape === "cylindrical" && values.diameter <= 0;
+
+  if (invalidRectangularDimensions || invalidCylindricalDimension) {
+    return;
+  }
+
+  const compatibleGrippers = getCompatibleGrippers(values.workpieceShape);
+
+  if (selectedGripper && !compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model)) {
+    selectedGripper = null;
+    geometryCompatibilityMessageEl.textContent = "Selected gripper is not compatible with workpiece geometry";
+  } else {
+    geometryCompatibilityMessageEl.textContent = "";
   }
 
   syncParallelControlsForSelection();
 
-  const results = grippers.map((gripper) => calculateForGripper(gripper, values));
+  const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
   const safeResults = results.filter((result) => result.safe).sort((a, b) => a.excessForce - b.excessForce);
   const bestOption = safeResults[0] || null;
 
-  renderCards(bestOption ? bestOption.model : null);
+  renderCards(compatibleGrippers, bestOption ? bestOption.model : null);
 
   if (!selectedGripper) {
     setNoSelectionState();
@@ -263,10 +310,15 @@ function updateUI() {
 }
 
 function init() {
-  renderCards(null);
+  syncGeometryFields();
+  renderCards(getCompatibleGrippers(workpieceShapeEl.value), null);
 
   form.addEventListener("input", updateUI);
   form.addEventListener("change", (event) => {
+    if (event.target.id === "workpieceShape") {
+      syncGeometryFields();
+    }
+
     if (event.target.id === "parallelMode") {
       gripperCountEl.disabled = parallelModeEl.value !== "enabled";
       if (parallelModeEl.value !== "enabled") {

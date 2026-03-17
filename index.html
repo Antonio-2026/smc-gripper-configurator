@@ -31,6 +31,28 @@
 
         <form id="configForm" class="form-grid">
           <label>
+            Workpiece shape
+            <select id="workpieceShape" title="Cylindrical parts require 3-finger centering grip for stability">
+              <option value="rectangular">Rectangular</option>
+              <option value="square">Square</option>
+              <option value="cylindrical">Cylindrical</option>
+            </select>
+          </label>
+          <div id="rectangularDimensions" class="dimension-group">
+            <label>
+              Width (mm)
+              <input id="width" type="number" min="0.1" step="0.1" value="50" required />
+            </label>
+            <label>
+              Height (mm)
+              <input id="height" type="number" min="0.1" step="0.1" value="30" required />
+            </label>
+          </div>
+          <label id="cylindricalDimensions" class="dimension-group is-hidden">
+            Diameter (mm)
+            <input id="diameter" type="number" min="0.1" step="0.1" value="40" />
+          </label>
+          <label>
             Workpiece mass (kg)
             <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
           </label>
@@ -69,6 +91,8 @@
             <input id="offset" type="number" min="0" step="0.1" value="0" required />
           </label>
         </form>
+
+        <p id="geometryCompatibilityMessage" class="compatibility-message" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel results-panel">
