@@ -101,8 +101,9 @@
       </section>
 
       <section class="panel results-panel">
-        <h2>Resultados</h2>
-        <div class="result-grid">
+        <div id="relatorio">
+          <h2>Resultados</h2>
+          <div class="result-grid">
           <article>
             <p class="metric-label">Modelo selecionado</p>
             <p id="selectedModel" class="metric-value">—</p>
@@ -148,8 +149,9 @@
           </table>
         </div>
 
-        <div class="actions-row">
-          <button type="button" id="generatePdfBtn" onclick="gerarPDF()">Gerar Relatório PDF</button>
+          <div class="actions-row">
+            <button type="button" id="generatePdfBtn" onclick="gerarPDF()">Gerar Relatório PDF</button>
+          </div>
         </div>
       </section>
     </main>
