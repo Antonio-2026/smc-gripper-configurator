@@ -225,28 +225,31 @@ async function gerarPDF() {
   const { jsPDF } = window.jspdf;
 
   const elemento = document.querySelector("#relatorio");
-  // IMPORTANTE: criar uma div com id="relatorio" envolvendo os resultados
 
   if (!elemento) {
     alert("Erro: área do relatório não encontrada.");
     return;
   }
 
+  elemento.style.background = "#FFFFFF";
+
   const canvas = await html2canvas(elemento, {
-    scale: 2,
+    scale: 4,
     useCORS: true,
+    logging: false,
   });
 
-  const imgData = canvas.toDataURL("image/png");
+  const imgData = canvas.toDataURL("image/png", 1.0);
 
   const pdf = new jsPDF("p", "mm", "a4");
 
-  const largura = 210;
-  const altura = (canvas.height * largura) / canvas.width;
+  const larguraPDF = 210;
+  const larguraImg = larguraPDF;
+  const alturaImg = (canvas.height * larguraImg) / canvas.width;
 
-  pdf.addImage(imgData, "PNG", 0, 10, largura, altura);
+  pdf.addImage(imgData, "PNG", 0, 5, larguraImg, alturaImg);
 
-  pdf.save("Relatorio_SMC.pdf");
+  pdf.save("Relatorio_SMC_Alta_Qualidade.pdf");
 }
 
 function updateUI() {
