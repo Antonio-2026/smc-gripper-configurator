@@ -25,7 +25,6 @@ const widthEl = document.getElementById("width");
 const heightEl = document.getElementById("height");
 const diameterEl = document.getElementById("diameter");
 const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
-const generatePdfBtnEl = document.getElementById("generatePdfBtn");
 
 const chart = new Chart(document.getElementById("forceChart"), {
   type: "line",
@@ -222,82 +221,35 @@ function updateReportPayload(values, selectedResult) {
   };
 }
 
-async function generatePdfReport() {
-  if (!reportPayload) return;
+function gerarPDF() {
+  if (!window.jspdf || !window.html2canvas) return;
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p", "mm", "a4");
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const logo = document.querySelector(".smc-logo");
+  const element = document.body;
 
-  pdf.setFontSize(15);
-  pdf.text("Relatório de Validação de Garra para Cobots", 14, 16);
+  html2canvas(element).then((canvas) => {
+    const imgData = canvas.toDataURL("image/png");
 
-  if (logo) {
-    const logoCanvas = await html2canvas(logo, { backgroundColor: null, scale: 2 });
-    const logoData = logoCanvas.toDataURL("image/png");
-    pdf.addImage(logoData, "PNG", pageWidth - 46, 8, 32, 9);
-  }
+    const pdf = new jsPDF("p", "mm", "a4");
 
-  let y = 30;
-  pdf.setFontSize(12);
-  pdf.text("1. DADOS DA APLICAÇÃO", 14, y);
-  y += 7;
-  pdf.setFontSize(10);
-  [
-    `Tipo de peça: ${reportPayload.tipoPeca}`,
-    `Dimensões: ${reportPayload.dimensoes}`,
-    `Massa: ${reportPayload.massa}`,
-    `Coeficiente de atrito: ${reportPayload.atrito}`,
-    `Fator de segurança: ${reportPayload.seguranca}`,
-    `Pressão: ${reportPayload.pressao}`,
-    `Distância de pega (L): ${reportPayload.distancia}`,
-  ].forEach((line) => {
-    pdf.text(line, 14, y);
-    y += 5;
+    const imgWidth = 210;
+    const pageHeight = 295;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+    if (imgHeight > pageHeight) {
+      let remainingHeight = imgHeight - pageHeight;
+      let position = -pageHeight;
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        remainingHeight -= pageHeight;
+        position -= pageHeight;
+      }
+    }
+
+    pdf.save("relatorio_garra_smc.pdf");
   });
-
-  y += 3;
-  pdf.setFontSize(12);
-  pdf.text("2. GARRA", 14, y);
-  y += 7;
-  pdf.setFontSize(10);
-  [
-    `Modelo: ${reportPayload.modelo}`,
-    `Nº de dedos: ${reportPayload.dedos}`,
-    `Tipo de pega: ${reportPayload.modo}`,
-    `Força por dedo: ${reportPayload.forcaDedo}`,
-    `Força total: ${reportPayload.forcaTotal}`,
-  ].forEach((line) => {
-    pdf.text(line, 14, y);
-    y += 5;
-  });
-
-  y += 3;
-  pdf.setFontSize(12);
-  pdf.text("3. RESULTADOS", 14, y);
-  y += 7;
-  pdf.setFontSize(10);
-  [
-    `Força necessária: ${reportPayload.forcaNecessaria}`,
-    `Força disponível: ${reportPayload.forcaTotal}`,
-    `Margem: ${reportPayload.margem}`,
-    `Validação: ${reportPayload.validacao}`,
-  ].forEach((line) => {
-    pdf.text(line, 14, y);
-    y += 5;
-  });
-
-  y += 3;
-  pdf.setFontSize(12);
-  pdf.text("4. GRÁFICO", 14, y);
-  y += 4;
-  const chartCanvas = document.getElementById("forceChart");
-  const graphData = chartCanvas.toDataURL("image/png", 1.0);
-  pdf.addImage(graphData, "PNG", 14, y, 182, 62);
-
-  pdf.setFontSize(9);
-  pdf.text("Os resultados são indicativos e devem ser validados conforme aplicação real.", 14, 288);
-  pdf.save("relatorio-validacao-garra.pdf");
 }
 
 function updateUI() {
@@ -368,7 +320,6 @@ function init() {
     updateUI();
   });
 
-  generatePdfBtnEl.addEventListener("click", generatePdfReport);
   updateUI();
 }
 

@@ -31,21 +31,26 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #000;
+  padding: 10px 20px;
+  border-radius: 10px;
 }
 
 h1 {
   margin: 0.25rem 0;
+  color: #fff;
 }
 
 .subhead {
   margin: 0;
-  color: var(--muted);
+  color: #d0d7e2;
 }
 
+.header img,
 .smc-logo {
-  height: 40px;
+  height: 70px;
   width: auto;
-  margin-right: 20px;
+  object-fit: contain;
 }
 
 .container {
@@ -76,17 +81,26 @@ h1 {
   padding: 0.7rem;
   text-align: left;
   cursor: pointer;
+  color: #111 !important;
+}
+
+.gripper-card h3,
+.gripper-card strong {
+  color: #000 !important;
+  font-weight: 600;
 }
 
 .gripper-card.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(0, 114, 206, 0.16);
   background: #eef6fd;
+  color: #111 !important;
 }
 
 .gripper-card.recommended {
   background: #edf9f1;
   border-color: var(--safe);
+  color: #111 !important;
 }
 
 .card-head {
