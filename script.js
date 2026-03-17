@@ -47,10 +47,8 @@ const chart = new Chart(document.getElementById("forceChart"), {
 function getInputs() {
   return {
     mass: Number(document.getElementById("mass").value),
-    acceleration: Number(document.getElementById("acceleration").value),
     friction: Number(document.getElementById("friction").value),
     safetyFactor: Number(document.getElementById("safetyFactor").value),
-    grippers: Number(document.getElementById("grippers").value),
     pressure: Number(document.getElementById("pressure").value),
     mode: document.getElementById("mode").value,
     offset: Number(document.getElementById("offset").value),
@@ -58,19 +56,17 @@ function getInputs() {
 }
 
 function calculate(values) {
-  const baseForce = values.mode === "internal" ? GRIPPER_DATA.internalForceN : GRIPPER_DATA.externalForceN;
+  const grippingForcePerFinger = values.mode === "internal" ? GRIPPER_DATA.internalForceN : GRIPPER_DATA.externalForceN;
 
-  const fTotal = values.mass * (9.81 + values.acceleration);
-  const fRequired = fTotal / (values.friction * GRIPPER_DATA.fingers);
-  const fRequiredSafe = fRequired * values.safetyFactor;
-  const fPerGripper = fRequiredSafe / values.grippers;
-  const fAvailable = baseForce * (values.pressure / GRIPPER_DATA.referencePressureMPa);
+  const weight = values.mass * 9.81;
+  const fRequired = values.safetyFactor * (weight / values.friction);
+  const fAvailable = grippingForcePerFinger * GRIPPER_DATA.fingers * (values.pressure / GRIPPER_DATA.referencePressureMPa);
 
-  const marginPercent = ((fAvailable - fPerGripper) / fPerGripper) * 100;
-  const safe = fAvailable >= fPerGripper;
+  const marginPercent = ((fAvailable - fRequired) / fRequired) * 100;
+  const safe = fAvailable >= fRequired;
 
   return {
-    fPerGripper,
+    fRequired,
     fAvailable,
     marginPercent,
     safe,
@@ -80,13 +76,13 @@ function calculate(values) {
 function updateUI() {
   const values = getInputs();
 
-  if (values.friction <= 0 || values.grippers <= 0 || values.pressure <= 0) {
+  if (values.friction <= 0 || values.pressure <= 0) {
     return;
   }
 
   const result = calculate(values);
 
-  requiredForceEl.textContent = `${result.fPerGripper.toFixed(2)} N`;
+  requiredForceEl.textContent = `${result.fRequired.toFixed(2)} N`;
   availableForceEl.textContent = `${result.fAvailable.toFixed(2)} N`;
   safetyMarginEl.textContent = `${result.marginPercent.toFixed(2)}%`;
 
@@ -94,7 +90,7 @@ function updateUI() {
   resultTagEl.classList.remove("safe", "unsafe");
   resultTagEl.classList.add(result.safe ? "safe" : "unsafe");
 
-  chart.data.datasets[0].data = [result.fPerGripper, result.fAvailable];
+  chart.data.datasets[0].data = [result.fRequired, result.fAvailable];
   chart.update();
 }
 

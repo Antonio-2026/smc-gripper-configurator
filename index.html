@@ -30,8 +30,8 @@
             <li><strong>Model:</strong> RMHZ2</li>
             <li><strong>Type:</strong> Pneumatic parallel gripper</li>
             <li><strong>Fingers:</strong> 2</li>
-            <li><strong>Gripping force (external):</strong> 54.2 N</li>
-            <li><strong>Gripping force (internal):</strong> 72.2 N</li>
+            <li><strong>Gripping force per finger (external):</strong> 54.2 N</li>
+            <li><strong>Gripping force per finger (internal):</strong> 72.2 N</li>
             <li><strong>Reference pressure:</strong> 0.5 MPa</li>
           </ul>
         </div>
@@ -42,20 +42,12 @@
             <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
           </label>
           <label>
-            Acceleration (m/s²)
-            <input id="acceleration" type="number" min="0" step="0.01" value="2" required />
-          </label>
-          <label>
             Friction coefficient
             <input id="friction" type="number" min="0.01" step="0.01" value="0.2" required />
           </label>
           <label>
             Safety factor
             <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
-          </label>
-          <label>
-            Number of parallel grippers
-            <input id="grippers" type="number" min="1" step="1" value="1" required />
           </label>
           <label>
             Operating pressure (MPa)
@@ -79,11 +71,11 @@
         <h2>Results</h2>
         <div class="result-grid">
           <article>
-            <p class="metric-label">Required force per gripper</p>
+            <p class="metric-label">Required force</p>
             <p id="requiredForce" class="metric-value">0.00 N</p>
           </article>
           <article>
-            <p class="metric-label">Available force per gripper</p>
+            <p class="metric-label">Available force</p>
             <p id="availableForce" class="metric-value">0.00 N</p>
           </article>
           <article>
