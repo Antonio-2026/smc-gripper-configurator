@@ -26,12 +26,14 @@ const grippers = [
 ];
 
 let selectedGripper = null;
+let reportPayload = null;
 
 const form = document.getElementById("configForm");
 const gripperCardsEl = document.getElementById("gripperCards");
 const selectedModelEl = document.getElementById("selectedModel");
 const requiredForceEl = document.getElementById("requiredForce");
 const availableForceEl = document.getElementById("availableForce");
+const safetyMarginEl = document.getElementById("safetyMargin");
 const resultTagEl = document.getElementById("resultTag");
 const recommendationEl = document.getElementById("recommendation");
 const comparisonTableBodyEl = document.getElementById("comparisonTableBody");
@@ -46,15 +48,26 @@ const diameterEl = document.getElementById("diameter");
 const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
 
 const chart = new Chart(document.getElementById("forceChart"), {
-  type: "bar",
+  type: "line",
   data: {
-    labels: ["Required", "Available"],
+    labels: [],
     datasets: [
       {
-        label: "Force (N)",
-        data: [0, 0],
-        backgroundColor: ["#f39c12", "#0f62fe"],
-        borderRadius: 8,
+        label: "Força disponível (N)",
+        data: [],
+        borderColor: "#0072ce",
+        backgroundColor: "rgba(0, 114, 206, 0.15)",
+        fill: true,
+        tension: 0.2,
+        pointRadius: 2,
+      },
+      {
+        label: "Ponto de operação",
+        data: [],
+        borderColor: "#f59e0b",
+        backgroundColor: "#f59e0b",
+        showLine: false,
+        pointRadius: 6,
       },
     ],
   },
@@ -62,14 +75,20 @@ const chart = new Chart(document.getElementById("forceChart"), {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: false },
+      legend: { display: true },
     },
     scales: {
+      x: {
+        title: {
+          display: true,
+          text: "Pressão (MPa)",
+        },
+      },
       y: {
         beginAtZero: true,
         title: {
           display: true,
-          text: "Force (N)",
+          text: "Força (N)",
         },
       },
     },
@@ -116,6 +135,22 @@ function getPerFingerForce(gripper, mode) {
   return mode === "internal" ? gripper.internal_per_finger : gripper.external_per_finger;
 }
 
+function getSafetyMargin(fAvailable, fRequired) {
+  return ((fAvailable - fRequired) / fRequired) * 100;
+}
+
+function getSafetyMarginClass(marginPercent) {
+  if (marginPercent < 0) {
+    return "margin-danger";
+  }
+
+  if (marginPercent <= 20) {
+    return "margin-warning";
+  }
+
+  return "margin-safe";
+}
+
 function calculateForGripper(gripper, values) {
   const perFingerForce = getPerFingerForce(gripper, values.mode);
   const weight = values.mass * 9.81;
@@ -129,6 +164,7 @@ function calculateForGripper(gripper, values) {
   const baseAvailableForce = perFingerForce * gripper.fingers;
   const pressureAdjustedForce = baseAvailableForce * (values.pressure / gripper.reference_pressure);
   const fAvailable = pressureAdjustedForce * effectiveGripperCount;
+  const marginPercent = getSafetyMargin(fAvailable, fRequired);
 
   return {
     model: gripper.model,
@@ -137,8 +173,22 @@ function calculateForGripper(gripper, values) {
     fAvailable,
     excessForce: fAvailable - fRequired,
     safe: fAvailable >= fRequired,
+    marginPercent,
     effectiveGripperCount,
+    baseAvailableForce,
   };
+}
+
+function buildPressureCurve(result, selectedValues) {
+  const pressureSteps = [];
+  const forceSteps = [];
+
+  for (let pressure = 0.1; pressure <= 0.700001; pressure += 0.05) {
+    pressureSteps.push(Number(pressure.toFixed(2)));
+    forceSteps.push(result.baseAvailableForce * (pressure / selectedValues.referencePressure) * result.effectiveGripperCount);
+  }
+
+  return { pressureSteps, forceSteps };
 }
 
 function renderCards(availableGrippers, bestModel) {
@@ -157,15 +207,15 @@ function renderCards(availableGrippers, bestModel) {
       card.classList.add("recommended");
     }
 
-    const parallelLabel = gripper.allows_parallel ? "Yes" : "No";
+    const parallelLabel = gripper.allows_parallel ? "Sim" : "Não";
     card.innerHTML = `
       <div class="card-head">
         <strong>${gripper.model}</strong>
-        ${bestModel === gripper.model ? '<span class="badge">Best</span>' : ""}
+        ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
       </div>
       <div class="card-body">
-        <span>${gripper.fingers} fingers</span>
-        <span>Parallel: ${parallelLabel}</span>
+        <span>${gripper.fingers} dedos</span>
+        <span>Paralelo: ${parallelLabel}</span>
       </div>
     `;
 
@@ -183,7 +233,7 @@ function renderTable(results, bestModel) {
   comparisonTableBodyEl.innerHTML = "";
 
   if (!validResults.length) {
-    comparisonTableBodyEl.innerHTML = '<tr><td colspan="6">No valid grippers for current inputs.</td></tr>';
+    comparisonTableBodyEl.innerHTML = '<tr><td colspan="7">Nenhuma garra aprovada para os parâmetros atuais.</td></tr>';
     return;
   }
 
@@ -199,7 +249,8 @@ function renderTable(results, bestModel) {
       <td>${result.fAvailable.toFixed(2)}</td>
       <td>${result.fRequired.toFixed(2)}</td>
       <td>${result.excessForce.toFixed(2)}</td>
-      <td>SAFE</td>
+      <td class="${getSafetyMarginClass(result.marginPercent)}">${result.marginPercent.toFixed(1)}%</td>
+      <td>APROVADO</td>
     `;
 
     comparisonTableBodyEl.appendChild(row);
@@ -232,13 +283,37 @@ function setNoSelectionState() {
   selectedModelEl.textContent = "—";
   requiredForceEl.textContent = "0.00 N";
   availableForceEl.textContent = "0.00 N";
+  safetyMarginEl.textContent = "0.00%";
+  safetyMarginEl.classList.remove("margin-danger", "margin-warning", "margin-safe");
   resultTagEl.textContent = "—";
   resultTagEl.classList.remove("safe", "unsafe");
-  recommendationEl.textContent = "Select a gripper to start";
+  recommendationEl.textContent = "Selecione uma garra para iniciar";
   recommendationEl.classList.remove("is-safe");
-  comparisonTableBodyEl.innerHTML = '<tr><td colspan="6">Select a gripper to start</td></tr>';
-  chart.data.datasets[0].data = [0, 0];
+  comparisonTableBodyEl.innerHTML = '<tr><td colspan="7">Selecione uma garra para iniciar</td></tr>';
+  chart.data.labels = [];
+  chart.data.datasets[0].data = [];
+  chart.data.datasets[1].data = [];
   chart.update();
+}
+
+function updateReportPayload(values, selectedResult) {
+  reportPayload = {
+    dadosDaAplicacao: {
+      massaKg: values.mass,
+      coeficienteAtrito: values.friction,
+      fatorSeguranca: values.safetyFactor,
+      distanciaPegaMm: values.offset,
+      numeroGarras: selectedResult.effectiveGripperCount,
+      modoPreensao: values.mode,
+      operacaoParalela: values.parallelMode,
+    },
+    garraSelecionada: selectedResult.model,
+    forcaNecessariaN: Number(selectedResult.fRequired.toFixed(2)),
+    forcaDisponivelN: Number(selectedResult.fAvailable.toFixed(2)),
+    margemSegurancaPercentual: Number(selectedResult.marginPercent.toFixed(2)),
+    tipoPeca: values.workpieceShape,
+    pressaoTrabalhoMPa: values.pressure,
+  };
 }
 
 function updateUI() {
@@ -260,7 +335,7 @@ function updateUI() {
 
   if (selectedGripper && !compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model)) {
     selectedGripper = null;
-    geometryCompatibilityMessageEl.textContent = "Selected gripper is not compatible with workpiece geometry";
+    geometryCompatibilityMessageEl.textContent = "A garra selecionada não é compatível com o formato da peça";
   } else {
     geometryCompatibilityMessageEl.textContent = "";
   }
@@ -284,30 +359,39 @@ function updateUI() {
     return;
   }
 
-  selectedModelEl.textContent = `${selectedResult.model} (${selectedResult.effectiveGripperCount} gripper${
+  selectedModelEl.textContent = `${selectedResult.model} (${selectedResult.effectiveGripperCount} garra${
     selectedResult.effectiveGripperCount > 1 ? "s" : ""
   })`;
   requiredForceEl.textContent = `${selectedResult.fRequired.toFixed(2)} N`;
   availableForceEl.textContent = `${selectedResult.fAvailable.toFixed(2)} N`;
+  safetyMarginEl.textContent = `${selectedResult.marginPercent.toFixed(1)}%`;
+  safetyMarginEl.classList.remove("margin-danger", "margin-warning", "margin-safe");
+  safetyMarginEl.classList.add(getSafetyMarginClass(selectedResult.marginPercent));
 
-  resultTagEl.textContent = selectedResult.safe ? "SAFE" : "NOT SAFE";
+  resultTagEl.textContent = selectedResult.safe ? "APROVADO" : "REPROVADO";
   resultTagEl.classList.remove("safe", "unsafe");
   resultTagEl.classList.add(selectedResult.safe ? "safe" : "unsafe");
 
-  chart.data.datasets[0].data = [selectedResult.fRequired, selectedResult.fAvailable];
+  const curveData = buildPressureCurve(selectedResult, { referencePressure: selectedGripper.reference_pressure });
+  chart.data.labels = curveData.pressureSteps;
+  chart.data.datasets[0].data = curveData.forceSteps;
+  chart.data.datasets[1].data = curveData.pressureSteps.map((pressureValue) =>
+    Math.abs(pressureValue - values.pressure) < 0.026 ? selectedResult.fAvailable : null
+  );
   chart.update();
 
   if (bestOption) {
-    recommendationEl.textContent = `Recommended gripper: ${bestOption.model} (lowest excess force: ${bestOption.excessForce.toFixed(
+    recommendationEl.textContent = `Recomendação automática: ${bestOption.model} (menor excesso de força: ${bestOption.excessForce.toFixed(
       2
     )} N)`;
     recommendationEl.classList.add("is-safe");
   } else {
-    recommendationEl.textContent = "No SAFE grippers for the current input set.";
+    recommendationEl.textContent = "Nenhuma garra APROVADA para o conjunto atual de parâmetros.";
     recommendationEl.classList.remove("is-safe");
   }
 
   renderTable(results, bestOption ? bestOption.model : null);
+  updateReportPayload(values, selectedResult);
 }
 
 function init() {
