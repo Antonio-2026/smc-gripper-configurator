@@ -231,25 +231,35 @@ async function gerarPDF() {
     return;
   }
 
-  elemento.style.background = "#FFFFFF";
-
   const canvas = await html2canvas(elemento, {
-    scale: 4,
+    scale: 3,
     useCORS: true,
-    logging: false,
   });
 
-  const imgData = canvas.toDataURL("image/png", 1.0);
+  const imgData = canvas.toDataURL("image/png");
 
   const pdf = new jsPDF("p", "mm", "a4");
 
-  const larguraPDF = 210;
-  const larguraImg = larguraPDF;
-  const alturaImg = (canvas.height * larguraImg) / canvas.width;
+  const pageWidth = 210;
+  const pageHeight = 297;
 
-  pdf.addImage(imgData, "PNG", 0, 5, larguraImg, alturaImg);
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-  pdf.save("Relatorio_SMC_Alta_Qualidade.pdf");
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft > 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+
+  pdf.save("Relatorio_SMC.pdf");
 }
 
 function updateUI() {
