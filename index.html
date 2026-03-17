@@ -3,81 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SMC Gripper Configurator</title>
+    <title>RMHZ2 Engineering Configurator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
-    <header class="top-bar">
-      <div>
-        <p class="eyebrow">SMC Industrial Automation</p>
-        <h1>Collaborative Gripper Configurator</h1>
-      </div>
-      <p class="subtitle">
-        Match cobot payload profiles with pneumatic grippers and visualize a
-        safe gripping envelope.
-      </p>
+    <header class="app-header">
+      <p class="eyebrow">SMC Engineering Validation</p>
+      <h1>RMHZ2 Gripper Web Configurator</h1>
+      <p class="subhead">Single-model force validation tool for pneumatic parallel gripping applications.</p>
     </header>
 
-    <main class="layout-grid">
-      <section>
-        <div class="section-title-row">
-          <h2>1. Select Robot</h2>
-          <span class="chip">Payload + Reach</span>
+    <main class="container">
+      <section class="panel inputs-panel">
+        <h2>Input Parameters</h2>
+
+        <div class="model-info">
+          <h3>Fixed Gripper Data</h3>
+          <ul>
+            <li><strong>Model:</strong> RMHZ2</li>
+            <li><strong>Type:</strong> Pneumatic parallel gripper</li>
+            <li><strong>Fingers:</strong> 2</li>
+            <li><strong>Gripping force (external):</strong> 54.2 N</li>
+            <li><strong>Gripping force (internal):</strong> 72.2 N</li>
+            <li><strong>Reference pressure:</strong> 0.5 MPa</li>
+          </ul>
         </div>
-        <div id="robotCards" class="card-grid"></div>
+
+        <form id="configForm" class="form-grid">
+          <label>
+            Workpiece mass (kg)
+            <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
+          </label>
+          <label>
+            Acceleration (m/s²)
+            <input id="acceleration" type="number" min="0" step="0.01" value="2" required />
+          </label>
+          <label>
+            Friction coefficient
+            <input id="friction" type="number" min="0.01" step="0.01" value="0.2" required />
+          </label>
+          <label>
+            Safety factor
+            <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
+          </label>
+          <label>
+            Number of parallel grippers
+            <input id="grippers" type="number" min="1" step="1" value="1" required />
+          </label>
+          <label>
+            Operating pressure (MPa)
+            <input id="pressure" type="number" min="0.01" step="0.01" value="0.5" required />
+          </label>
+          <label>
+            Gripping mode
+            <select id="mode">
+              <option value="external">External</option>
+              <option value="internal">Internal</option>
+            </select>
+          </label>
+          <label>
+            Offset distance (mm)
+            <input id="offset" type="number" min="0" step="0.1" value="0" required />
+          </label>
+        </form>
       </section>
 
-      <section>
-        <div class="section-title-row">
-          <h2>2. Select Gripper</h2>
-          <span class="chip">Force + Mass</span>
+      <section class="panel results-panel">
+        <h2>Results</h2>
+        <div class="result-grid">
+          <article>
+            <p class="metric-label">Required force per gripper</p>
+            <p id="requiredForce" class="metric-value">0.00 N</p>
+          </article>
+          <article>
+            <p class="metric-label">Available force per gripper</p>
+            <p id="availableForce" class="metric-value">0.00 N</p>
+          </article>
+          <article>
+            <p class="metric-label">Safety margin</p>
+            <p id="safetyMargin" class="metric-value">0.00%</p>
+          </article>
+          <article>
+            <p class="metric-label">Validation</p>
+            <p id="resultTag" class="result-tag">—</p>
+          </article>
         </div>
-        <div id="gripperCards" class="card-grid"></div>
-      </section>
 
-      <section class="envelope-panel">
-        <div class="section-title-row">
-          <h2>3. Grip Envelope</h2>
-          <span class="chip">Mass vs Force</span>
+        <h3>Force Comparison</h3>
+        <canvas id="forceChart" aria-label="Required vs Available force chart"></canvas>
+
+        <div class="formula-note">
+          <p><strong>Note:</strong> Offset distance is captured for future torque/moment validation and currently does not modify force output.</p>
         </div>
-        <p class="helper-text">
-          The green region indicates compatible payload and gripping force
-          combinations for the selected robot and gripper.
-        </p>
-        <svg id="envelopeGraph" viewBox="0 0 760 380" aria-label="Envelope graph"></svg>
       </section>
-
-      <aside class="selection-summary">
-        <h3>Configuration Summary</h3>
-        <dl>
-          <div>
-            <dt>Robot</dt>
-            <dd id="summaryRobot">—</dd>
-          </div>
-          <div>
-            <dt>Gripper</dt>
-            <dd id="summaryGripper">—</dd>
-          </div>
-          <div>
-            <dt>Available payload</dt>
-            <dd id="summaryPayload">—</dd>
-          </div>
-          <div>
-            <dt>Nominal grip force</dt>
-            <dd id="summaryForce">—</dd>
-          </div>
-          <div>
-            <dt>Safety margin</dt>
-            <dd id="summaryMargin">—</dd>
-          </div>
-        </dl>
-      </aside>
     </main>
 
     <script src="script.js"></script>
