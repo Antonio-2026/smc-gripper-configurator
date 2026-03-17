@@ -11,16 +11,16 @@ const grippers = [
     model: "RMHF2",
     fingers: 2,
     allows_parallel: true,
-    external_per_finger: 78.1,
-    internal_per_finger: 97.5,
+    external_per_finger: 90,
+    internal_per_finger: 90,
     reference_pressure: 0.5,
   },
   {
     model: "RMHS3",
     fingers: 3,
     allows_parallel: false,
-    external_per_finger: 63.4,
-    internal_per_finger: 82.7,
+    external_per_finger: 118,
+    internal_per_finger: 130,
     reference_pressure: 0.5,
   },
 ];
@@ -119,7 +119,8 @@ function getPerFingerForce(gripper, mode) {
 function calculateForGripper(gripper, values) {
   const perFingerForce = getPerFingerForce(gripper, values.mode);
   const weight = values.mass * 9.81;
-  const fRequired = values.safetyFactor * (weight / values.friction);
+  const baseRequiredForce = values.safetyFactor * (weight / values.friction);
+  const fRequired = baseRequiredForce * (1 + values.offset / 20);
 
   const parallelEnabled = values.parallelMode === "enabled";
   const requestedCount = parallelEnabled ? values.gripperCount : 1;

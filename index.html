@@ -89,6 +89,7 @@
           <label>
             Offset distance (mm)
             <input id="offset" type="number" min="0" step="0.1" value="0" required />
+            <small class="helper-text">Offset distance increases required gripping force due to moment load</small>
           </label>
         </form>
 
@@ -140,7 +141,7 @@
 
         <div class="formula-note">
           <p><strong>Rule:</strong> F_required = safety_factor × (mass × 9.81 / friction), SAFE when F_available ≥ F_required.</p>
-          <p><strong>Note:</strong> Offset distance is captured for future torque/moment validation and currently does not modify force output.</p>
+          <p><strong>Note:</strong> Offset effect: F_required = F_required × (1 + offset_distance / 20).</p>
         </div>
       </section>
     </main>
