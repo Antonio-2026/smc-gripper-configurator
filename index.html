@@ -19,15 +19,33 @@
         <h1>Collaborative Gripper Configurator</h1>
       </div>
       <p class="subtitle">
-        Match cobot payload profiles with pneumatic grippers and visualize a
-        safe gripping envelope.
+        Engineer a robot + gripper pairing with live force calculations,
+        recommendation intelligence, and a dynamic payload envelope.
       </p>
     </header>
 
     <main class="layout-grid">
+      <section class="visualization-panel">
+        <div class="section-title-row">
+          <h2>1. 3D Cell Illustration</h2>
+          <span class="chip">Robot + Tool</span>
+        </div>
+        <div class="scene" id="scene3d" aria-label="3D robot and gripper illustration">
+          <div class="scene-glow"></div>
+          <div class="robot-base"></div>
+          <div class="robot-arm shoulder"></div>
+          <div class="robot-arm elbow" id="robotElbow"></div>
+          <div class="robot-arm wrist" id="robotWrist"></div>
+          <div class="robot-jaw left" id="jawLeft"></div>
+          <div class="robot-jaw right" id="jawRight"></div>
+          <div class="payload-cube" id="payloadCube"></div>
+        </div>
+        <div class="scene-caption" id="sceneCaption">UR5e + MHM-40D2 @ 0° orientation</div>
+      </section>
+
       <section>
         <div class="section-title-row">
-          <h2>1. Select Robot</h2>
+          <h2>2. Select Robot</h2>
           <span class="chip">Payload + Reach</span>
         </div>
         <div id="robotCards" class="card-grid"></div>
@@ -35,20 +53,59 @@
 
       <section>
         <div class="section-title-row">
-          <h2>2. Select Gripper</h2>
+          <h2>3. Select Gripper</h2>
           <span class="chip">Force + Mass</span>
         </div>
         <div id="gripperCards" class="card-grid"></div>
       </section>
 
+      <section class="controls-panel">
+        <div class="section-title-row">
+          <h2>4. Engineering Inputs</h2>
+          <span class="chip">Advanced UI</span>
+        </div>
+        <div class="controls-grid">
+          <label>Workpiece mass (kg)
+            <input id="workpieceMass" type="range" min="0.2" max="8" value="1.2" step="0.1" />
+            <output id="massOut">1.2 kg</output>
+          </label>
+          <label>Acceleration factor (g)
+            <input id="acceleration" type="range" min="0.2" max="2.5" value="1" step="0.1" />
+            <output id="accelOut">1.0 g</output>
+          </label>
+          <label>Friction coefficient (μ)
+            <input id="friction" type="range" min="0.1" max="1" value="0.35" step="0.05" />
+            <output id="frictionOut">0.35</output>
+          </label>
+          <label>Finger length (mm)
+            <input id="fingerLength" type="range" min="20" max="140" value="65" step="1" />
+            <output id="fingerOut">65 mm</output>
+          </label>
+          <label>Grip orientation
+            <select id="orientation">
+              <option value="horizontal">Horizontal (standard)</option>
+              <option value="vertical">Vertical pick</option>
+              <option value="inverted">Inverted overhead</option>
+            </select>
+          </label>
+          <label>Safety factor
+            <select id="safetyFactor">
+              <option value="1.8">1.8 (normal)</option>
+              <option value="2.2" selected>2.2 (recommended)</option>
+              <option value="2.8">2.8 (fragile/high risk)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
       <section class="envelope-panel">
         <div class="section-title-row">
-          <h2>3. Grip Envelope</h2>
-          <span class="chip">Mass vs Force</span>
+          <h2>5. Dynamic Envelope</h2>
+          <span class="chip">Live force model</span>
         </div>
         <p class="helper-text">
-          The green region indicates compatible payload and gripping force
-          combinations for the selected robot and gripper.
+          The chart updates from engineering inputs and selected hardware.
+          Dashed line is required force, filled region is available envelope.
         </p>
         <svg id="envelopeGraph" viewBox="0 0 760 380" aria-label="Envelope graph"></svg>
       </section>
@@ -65,18 +122,23 @@
             <dd id="summaryGripper">—</dd>
           </div>
           <div>
+            <dt>Calculated demand</dt>
+            <dd id="summaryDemand">—</dd>
+          </div>
+          <div>
             <dt>Available payload</dt>
             <dd id="summaryPayload">—</dd>
           </div>
           <div>
-            <dt>Nominal grip force</dt>
-            <dd id="summaryForce">—</dd>
-          </div>
-          <div>
-            <dt>Safety margin</dt>
+            <dt>Suitability margin</dt>
             <dd id="summaryMargin">—</dd>
           </div>
         </dl>
+
+        <div class="recommendation-box">
+          <h4>Recommendation Engine</h4>
+          <ol id="recommendationList"></ol>
+        </div>
       </aside>
     </main>
 
