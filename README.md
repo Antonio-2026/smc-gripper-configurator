@@ -4,11 +4,11 @@ Interactive single-page configurator for matching collaborative robots with SMC 
 
 ## Features
 
-- Robot selection cards with visual icons and core kinematic specs.
-- Gripper selection cards with force, stroke, and mass data.
-- Envelope graph plotting mass vs gripping force compatibility.
+- 3D-style robot and gripper illustration that updates with orientation and stroke.
+- Advanced engineering controls for mass, acceleration, friction, finger length, orientation, and safety factor.
+- Dynamic envelope graph plotting available vs required gripping force in real time.
+- Recommendation engine that ranks top robot + gripper combinations from the current process inputs.
 - Responsive dashboard layout for desktop/tablet/mobile use.
-- Modern industrial visual language with dark high-contrast UI.
 
 ## Run locally
 
