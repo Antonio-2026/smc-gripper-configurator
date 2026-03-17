@@ -5,8 +5,8 @@
   --text: #1a2634;
   --muted: #5e6d80;
   --accent: #0072ce;
-  --safe: #1f9d56;
-  --unsafe: #d53434;
+  --safe: #16a34a;
+  --unsafe: #dc2626;
   --warn: #c28a00;
 }
 
@@ -19,21 +19,21 @@ body {
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: linear-gradient(180deg, #f9fafc 0%, #eff3f8 100%);
-  padding: 1.5rem;
 }
 
 .app-header {
-  margin-bottom: 1.1rem;
-  padding: 0.75rem 0.2rem;
+  margin-bottom: 1rem;
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: #000;
   padding: 10px 20px;
-  border-radius: 10px;
 }
 
 h1 {
@@ -48,15 +48,21 @@ h1 {
 
 .header img,
 .smc-logo {
-  height: 70px;
+  height: 64px;
   width: auto;
   object-fit: contain;
 }
 
-.container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.main-container {
+  display: flex;
   gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+}
+
+.left-panel,
+.right-panel {
+  width: 50%;
 }
 
 .panel {
@@ -84,23 +90,15 @@ h1 {
   color: #111 !important;
 }
 
-.gripper-card h3,
-.gripper-card strong {
-  color: #000 !important;
-  font-weight: 600;
-}
-
 .gripper-card.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(0, 114, 206, 0.16);
   background: #eef6fd;
-  color: #111 !important;
 }
 
 .gripper-card.recommended {
   background: #edf9f1;
   border-color: var(--safe);
-  color: #111 !important;
 }
 
 .card-head {
@@ -149,23 +147,26 @@ label {
 }
 
 input,
-select,
-button {
+select {
   width: 100%;
   border: 1px solid #b9c5d3;
   border-radius: 8px;
-  padding: 0.55rem;
-  font: inherit;
+  height: 48px;
+  font-size: 16px;
+  padding: 10px;
   background: #fff;
 }
 
 button {
-  max-width: 240px;
+  border: 1px solid #b9c5d3;
+  border-radius: 8px;
   background: var(--accent);
   color: #fff;
-  border: 0;
   font-weight: 600;
   cursor: pointer;
+  height: 50px;
+  font-size: 16px;
+  width: 100%;
 }
 
 .result-grid {
@@ -198,17 +199,19 @@ button {
 .margin-warning { color: var(--warn); }
 .margin-safe { color: var(--safe); }
 
-.result-tag {
-  display: inline-block;
+.validation {
   margin: 0.35rem 0 0;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-weight: 700;
-  background: #dde3eb;
+  font-size: 20px;
+  font-weight: bold;
 }
 
-.result-tag.safe { color: #fff; background: var(--safe); }
-.result-tag.unsafe { color: #fff; background: var(--unsafe); }
+.safe {
+  color: #16a34a;
+}
+
+.not-safe {
+  color: #dc2626;
+}
 
 .recommendation {
   margin-bottom: 1rem;
@@ -263,20 +266,23 @@ th {
   font-weight: 600;
 }
 
-.actions-row {
-  margin-top: 1rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
 @media (max-width: 960px) {
-  .container {
+  .form-grid,
+  .result-grid,
+  .dimension-group,
+  .gripper-cards {
     grid-template-columns: 1fr;
   }
+}
 
-  .form-grid,
-  .result-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
   }
 
   .header {

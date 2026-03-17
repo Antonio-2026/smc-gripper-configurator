@@ -5,7 +5,6 @@ const grippers = [
 ];
 
 let selectedGripper = null;
-let reportPayload = null;
 
 const form = document.getElementById("configForm");
 const gripperCardsEl = document.getElementById("gripperCards");
@@ -195,71 +194,10 @@ function setNoSelectionState() {
   safetyMarginEl.textContent = "0.00%";
   safetyMarginEl.className = "metric-value";
   resultTagEl.textContent = "—";
-  resultTagEl.className = "result-tag";
+  resultTagEl.className = "validation";
   recommendationEl.textContent = "Selecione uma garra para iniciar.";
   recommendationEl.classList.remove("is-safe");
   comparisonTableBodyEl.innerHTML = '<tr><td colspan="7">Selecione uma garra para iniciar.</td></tr>';
-}
-
-function updateReportPayload(values, selectedResult) {
-  reportPayload = {
-    tipoPeca: values.workpieceShape === "cylindrical" ? "Cilíndrica" : values.workpieceShape === "square" ? "Quadrada" : "Retangular",
-    dimensoes: values.workpieceShape === "cylindrical" ? `Diâmetro: ${values.diameter} mm` : `Largura: ${values.width} mm, Altura: ${values.height} mm`,
-    massa: `${values.mass} kg`,
-    atrito: values.friction,
-    seguranca: values.safetyFactor,
-    pressao: `${values.pressure} MPa`,
-    distancia: `${values.offset} mm`,
-    modelo: selectedResult.model,
-    dedos: selectedResult.fingers,
-    modo: values.mode === "internal" ? "Interna" : "Externa",
-    forcaDedo: `${selectedResult.perFingerForce.toFixed(2)} N`,
-    forcaTotal: `${selectedResult.fAvailable.toFixed(2)} N`,
-    forcaNecessaria: `${selectedResult.fRequired.toFixed(2)} N`,
-    margem: `${selectedResult.marginPercent.toFixed(1)}%`,
-    validacao: selectedResult.safe ? "APROVADO" : "REPROVADO",
-  };
-}
-
-async function gerarPDF() {
-  const { jsPDF } = window.jspdf;
-
-  const elemento = document.querySelector("#relatorio");
-
-  if (!elemento) {
-    alert("Erro: área do relatório não encontrada.");
-    return;
-  }
-
-  const canvas = await html2canvas(elemento, {
-    scale: 3,
-    useCORS: true,
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-
-  const pdf = new jsPDF("p", "mm", "a4");
-
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-  let heightLeft = imgHeight;
-  let position = 0;
-
-  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0.01) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-  }
-
-  pdf.save("Relatorio_SMC.pdf");
 }
 
 function updateUI() {
@@ -282,6 +220,10 @@ function updateUI() {
 
   renderCards(compatibleGrippers, best?.model || null);
 
+  if (!selectedGripper && best) {
+    selectedGripper = compatibleGrippers.find((g) => g.model === best.model) || null;
+  }
+
   if (!selectedGripper) {
     setNoSelectionState();
     return;
@@ -299,7 +241,7 @@ function updateUI() {
   safetyMarginEl.textContent = `${selectedResult.marginPercent.toFixed(1)}%`;
   safetyMarginEl.className = `metric-value ${getSafetyMarginClass(selectedResult.marginPercent)}`;
   resultTagEl.textContent = selectedResult.safe ? "APROVADO" : "REPROVADO";
-  resultTagEl.className = `result-tag ${selectedResult.safe ? "safe" : "unsafe"}`;
+  resultTagEl.className = `validation ${selectedResult.safe ? "safe" : "not-safe"}`;
 
   const curve = buildPressureCurve(selectedResult);
   chart.data.labels = curve.pressureSteps;
@@ -313,7 +255,6 @@ function updateUI() {
   recommendationEl.classList.toggle("is-safe", Boolean(best));
 
   renderTable(results, best?.model || null);
-  updateReportPayload(values, selectedResult);
 }
 
 function init() {
