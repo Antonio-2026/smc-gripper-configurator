@@ -55,24 +55,51 @@ h1 {
   padding: 1rem;
 }
 
-.model-info {
-  background: #f7f9fc;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.75rem;
+.gripper-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-.model-info h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+.gripper-card {
+  border: 1px solid var(--line);
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 0.7rem;
+  text-align: left;
+  cursor: pointer;
 }
 
-.model-info ul {
-  margin: 0;
-  padding-left: 1rem;
+.gripper-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.gripper-card.recommended {
+  background: #eef7ef;
+  border-color: var(--safe);
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge {
+  font-size: 0.72rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--safe);
+  color: #fff;
+}
+
+.card-body {
+  margin-top: 0.45rem;
   display: grid;
-  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .form-grid {
@@ -119,7 +146,7 @@ select {
 
 .metric-value {
   margin: 0.35rem 0 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
 }
 
@@ -142,9 +169,50 @@ select {
   background: var(--unsafe);
 }
 
+.recommendation {
+  margin-bottom: 1rem;
+  border: 1px solid #c8d4e3;
+  border-radius: 9px;
+  padding: 0.6rem 0.75rem;
+  background: #f8fbff;
+  color: #2b3e53;
+  font-weight: 600;
+}
+
+.recommendation.is-safe {
+  border-color: var(--safe);
+  background: #eef7ef;
+}
+
 #forceChart {
   width: 100%;
-  max-height: 280px;
+  max-height: 260px;
+}
+
+.table-wrap {
+  margin-top: 0.8rem;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+th {
+  background: #f2f6fb;
+}
+
+.best-row {
+  background: #eef7ef;
 }
 
 .formula-note {
@@ -156,7 +224,8 @@ select {
 @media (max-width: 960px) {
   .container,
   .form-grid,
-  .result-grid {
+  .result-grid,
+  .gripper-cards {
     grid-template-columns: 1fr;
   }
 }

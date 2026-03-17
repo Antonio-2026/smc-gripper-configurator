@@ -1,6 +1,6 @@
-# RMHZ2 Engineering Web Configurator
+# SMC Gripper Engineering Web Configurator
 
-Simple local web app to validate gripping force calculations for a single gripper model (SMC RMHZ2) before expanding to multiple models.
+Local web app to validate gripping force calculations across multiple gripper models using a JSON-based model database.
 
 ## Tech
 
@@ -8,17 +8,29 @@ Simple local web app to validate gripping force calculations for a single grippe
 - CSS
 - Vanilla JavaScript
 - Chart.js (CDN)
+- JSON model dataset (`grippers.json`)
 
 ## What it does
 
-- Uses fixed RMHZ2 data (external/internal force, reference pressure, two fingers).
-- Accepts process inputs: mass, acceleration, friction, safety factor, number of grippers, pressure, mode, and offset.
-- Calculates:
-  - required force per gripper,
-  - available force per gripper,
-  - safety margin (%),
-  - SAFE / NOT SAFE status.
-- Draws a bar chart comparing required vs available force.
+- Loads multiple grippers from JSON with these fields:
+  - `model`
+  - `fingers`
+  - `allows_parallel`
+  - `gripping_force_external_per_finger`
+  - `gripping_force_internal_per_finger`
+  - `reference_pressure`
+- Calculates required force:
+  - `F_required = safety_factor × (mass × 9.81 / friction)`
+- Calculates available force:
+  - `F_available = force_per_finger × number_of_fingers × pressure_ratio × number_of_grippers`
+- Enforces 3-finger gripper rule:
+  - forced `number_of_grippers = 1`
+  - parallel selection disabled
+- Automatically recommends best gripper:
+  - filters SAFE options
+  - sorts by lowest excess force
+  - highlights best option in cards and table
+- Displays a comparison table of all valid grippers.
 
 ## Run locally
 

@@ -1,0 +1,34 @@
+[
+  {
+    "model": "RMHZ2-16D",
+    "fingers": 2,
+    "allows_parallel": true,
+    "gripping_force_external_per_finger": 54.2,
+    "gripping_force_internal_per_finger": 72.2,
+    "reference_pressure": 0.5
+  },
+  {
+    "model": "RMHZ2-20D",
+    "fingers": 2,
+    "allows_parallel": true,
+    "gripping_force_external_per_finger": 78.1,
+    "gripping_force_internal_per_finger": 97.5,
+    "reference_pressure": 0.5
+  },
+  {
+    "model": "MHL2-20D",
+    "fingers": 2,
+    "allows_parallel": true,
+    "gripping_force_external_per_finger": 104.8,
+    "gripping_force_internal_per_finger": 128.4,
+    "reference_pressure": 0.5
+  },
+  {
+    "model": "MHS3-20D",
+    "fingers": 3,
+    "allows_parallel": false,
+    "gripping_force_external_per_finger": 63.4,
+    "gripping_force_internal_per_finger": 82.7,
+    "reference_pressure": 0.5
+  }
+]
