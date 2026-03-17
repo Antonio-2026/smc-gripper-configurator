@@ -221,35 +221,32 @@ function updateReportPayload(values, selectedResult) {
   };
 }
 
-function gerarPDF() {
-  if (!window.jspdf || !window.html2canvas) return;
+async function gerarPDF() {
   const { jsPDF } = window.jspdf;
-  const element = document.body;
 
-  html2canvas(element).then((canvas) => {
-    const imgData = canvas.toDataURL("image/png");
+  const elemento = document.querySelector("#relatorio");
+  // IMPORTANTE: criar uma div com id="relatorio" envolvendo os resultados
 
-    const pdf = new jsPDF("p", "mm", "a4");
+  if (!elemento) {
+    alert("Erro: área do relatório não encontrada.");
+    return;
+  }
 
-    const imgWidth = 210;
-    const pageHeight = 295;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-
-    if (imgHeight > pageHeight) {
-      let remainingHeight = imgHeight - pageHeight;
-      let position = -pageHeight;
-      while (remainingHeight > 0) {
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        remainingHeight -= pageHeight;
-        position -= pageHeight;
-      }
-    }
-
-    pdf.save("relatorio_garra_smc.pdf");
+  const canvas = await html2canvas(elemento, {
+    scale: 2,
+    useCORS: true,
   });
+
+  const imgData = canvas.toDataURL("image/png");
+
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  const largura = 210;
+  const altura = (canvas.height * largura) / canvas.width;
+
+  pdf.addImage(imgData, "PNG", 0, 10, largura, altura);
+
+  pdf.save("Relatorio_SMC.pdf");
 }
 
 function updateUI() {
