@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RMHZ2 Engineering Configurator</title>
+    <title>SMC Gripper Engineering Configurator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,24 +16,17 @@
   <body>
     <header class="app-header">
       <p class="eyebrow">SMC Engineering Validation</p>
-      <h1>RMHZ2 Gripper Web Configurator</h1>
-      <p class="subhead">Single-model force validation tool for pneumatic parallel gripping applications.</p>
+      <h1>Multi-Gripper Web Configurator</h1>
+      <p class="subhead">Force validation tool for pneumatic gripping applications with automatic model recommendation.</p>
     </header>
 
     <main class="container">
       <section class="panel inputs-panel">
         <h2>Input Parameters</h2>
 
-        <div class="model-info">
-          <h3>Fixed Gripper Data</h3>
-          <ul>
-            <li><strong>Model:</strong> RMHZ2</li>
-            <li><strong>Type:</strong> Pneumatic parallel gripper</li>
-            <li><strong>Fingers:</strong> 2</li>
-            <li><strong>Gripping force per finger (external):</strong> 54.2 N</li>
-            <li><strong>Gripping force per finger (internal):</strong> 72.2 N</li>
-            <li><strong>Reference pressure:</strong> 0.5 MPa</li>
-          </ul>
+        <div>
+          <h3>Gripper Selection</h3>
+          <div id="gripperCards" class="gripper-cards" aria-live="polite"></div>
         </div>
 
         <form id="configForm" class="form-grid">
@@ -54,6 +47,17 @@
             <input id="pressure" type="number" min="0.01" step="0.01" value="0.5" required />
           </label>
           <label>
+            Number of grippers
+            <input id="gripperCount" type="number" min="1" step="1" value="1" required />
+          </label>
+          <label>
+            Parallel operation
+            <select id="parallelMode">
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+          <label>
             Gripping mode
             <select id="mode">
               <option value="external">External</option>
@@ -71,6 +75,10 @@
         <h2>Results</h2>
         <div class="result-grid">
           <article>
+            <p class="metric-label">Selected model</p>
+            <p id="selectedModel" class="metric-value">—</p>
+          </article>
+          <article>
             <p class="metric-label">Required force</p>
             <p id="requiredForce" class="metric-value">0.00 N</p>
           </article>
@@ -79,19 +87,35 @@
             <p id="availableForce" class="metric-value">0.00 N</p>
           </article>
           <article>
-            <p class="metric-label">Safety margin</p>
-            <p id="safetyMargin" class="metric-value">0.00%</p>
-          </article>
-          <article>
             <p class="metric-label">Validation</p>
             <p id="resultTag" class="result-tag">—</p>
           </article>
         </div>
 
+        <div id="recommendation" class="recommendation">No safe gripper found yet.</div>
+
         <h3>Force Comparison</h3>
         <canvas id="forceChart" aria-label="Required vs Available force chart"></canvas>
 
+        <h3>Valid Grippers Comparison</h3>
+        <div class="table-wrap">
+          <table id="comparisonTable">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Fingers</th>
+                <th>Available (N)</th>
+                <th>Required (N)</th>
+                <th>Excess (N)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="comparisonTableBody"></tbody>
+          </table>
+        </div>
+
         <div class="formula-note">
+          <p><strong>Rule:</strong> F_required = safety_factor × (mass × 9.81 / friction), SAFE when F_available ≥ F_required.</p>
           <p><strong>Note:</strong> Offset distance is captured for future torque/moment validation and currently does not modify force output.</p>
         </div>
       </section>
