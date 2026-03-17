@@ -1,5 +1,31 @@
-let grippers = [];
-let selectedModel = null;
+const grippers = [
+  {
+    model: "RMHZ2",
+    fingers: 2,
+    allows_parallel: true,
+    external_per_finger: 54.2,
+    internal_per_finger: 72.2,
+    reference_pressure: 0.5,
+  },
+  {
+    model: "RMHF2",
+    fingers: 2,
+    allows_parallel: true,
+    external_per_finger: 78.1,
+    internal_per_finger: 97.5,
+    reference_pressure: 0.5,
+  },
+  {
+    model: "RMHS3",
+    fingers: 3,
+    allows_parallel: false,
+    external_per_finger: 63.4,
+    internal_per_finger: 82.7,
+    reference_pressure: 0.5,
+  },
+];
+
+let selectedGripper = null;
 
 const form = document.getElementById("configForm");
 const gripperCardsEl = document.getElementById("gripperCards");
@@ -57,9 +83,7 @@ function getInputs() {
 }
 
 function getPerFingerForce(gripper, mode) {
-  return mode === "internal"
-    ? gripper.gripping_force_internal_per_finger
-    : gripper.gripping_force_external_per_finger;
+  return mode === "internal" ? gripper.internal_per_finger : gripper.external_per_finger;
 }
 
 function calculateForGripper(gripper, values) {
@@ -94,7 +118,7 @@ function renderCards(bestModel) {
     card.type = "button";
     card.className = "gripper-card";
 
-    if (selectedModel === gripper.model) {
+    if (selectedGripper?.model === gripper.model) {
       card.classList.add("selected");
     }
 
@@ -115,7 +139,7 @@ function renderCards(bestModel) {
     `;
 
     card.addEventListener("click", () => {
-      selectedModel = gripper.model;
+      selectedGripper = gripper;
       updateUI();
     });
 
@@ -152,12 +176,13 @@ function renderTable(results, bestModel) {
 }
 
 function syncParallelControlsForSelection() {
-  const current = grippers.find((item) => item.model === selectedModel);
-  if (!current) {
+  if (!selectedGripper) {
+    parallelModeEl.disabled = false;
+    gripperCountEl.disabled = parallelModeEl.value !== "enabled";
     return;
   }
 
-  const mustSingleGripper = current.fingers === 3 || !current.allows_parallel;
+  const mustSingleGripper = selectedGripper.fingers === 3 || !selectedGripper.allows_parallel;
   if (mustSingleGripper) {
     parallelModeEl.value = "disabled";
     parallelModeEl.disabled = true;
@@ -172,6 +197,19 @@ function syncParallelControlsForSelection() {
   }
 }
 
+function setNoSelectionState() {
+  selectedModelEl.textContent = "—";
+  requiredForceEl.textContent = "0.00 N";
+  availableForceEl.textContent = "0.00 N";
+  resultTagEl.textContent = "—";
+  resultTagEl.classList.remove("safe", "unsafe");
+  recommendationEl.textContent = "Select a gripper to start";
+  recommendationEl.classList.remove("is-safe");
+  comparisonTableBodyEl.innerHTML = '<tr><td colspan="6">Select a gripper to start</td></tr>';
+  chart.data.datasets[0].data = [0, 0];
+  chart.update();
+}
+
 function updateUI() {
   const values = getInputs();
 
@@ -179,22 +217,22 @@ function updateUI() {
     return;
   }
 
+  syncParallelControlsForSelection();
+
   const results = grippers.map((gripper) => calculateForGripper(gripper, values));
   const safeResults = results.filter((result) => result.safe).sort((a, b) => a.excessForce - b.excessForce);
   const bestOption = safeResults[0] || null;
 
-  if (!selectedModel && grippers.length) {
-    selectedModel = grippers[0].model;
+  renderCards(bestOption ? bestOption.model : null);
+
+  if (!selectedGripper) {
+    setNoSelectionState();
+    return;
   }
 
-  if (bestOption && !grippers.some((item) => item.model === selectedModel)) {
-    selectedModel = bestOption.model;
-  }
-
-  syncParallelControlsForSelection();
-
-  const selectedResult = results.find((result) => result.model === selectedModel) || results[0];
+  const selectedResult = results.find((result) => result.model === selectedGripper.model);
   if (!selectedResult) {
+    setNoSelectionState();
     return;
   }
 
@@ -221,14 +259,11 @@ function updateUI() {
     recommendationEl.classList.remove("is-safe");
   }
 
-  renderCards(bestOption ? bestOption.model : null);
   renderTable(results, bestOption ? bestOption.model : null);
 }
 
-async function init() {
-  const response = await fetch("grippers.json");
-  grippers = await response.json();
-  selectedModel = grippers[0]?.model || null;
+function init() {
+  renderCards(null);
 
   form.addEventListener("input", updateUI);
   form.addEventListener("change", (event) => {
