@@ -12,15 +12,19 @@
     />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   </head>
   <body>
-    <header class="app-header">
-      <p class="eyebrow">SMC Engineering Validation</p>
-      <h1>Configurador de Garras para Cobots</h1>
-      <p class="subhead">Ferramenta de validação de força para aplicações de preensão com recomendação automática de modelo</p>
+    <header class="app-header header">
+      <div>
+        <h1>Configurador de Garras para Cobots</h1>
+        <p class="subhead">Ferramenta de validação de força para aplicações de preensão com recomendação automática de modelo</p>
+      </div>
+      <img src="smc-logo.svg" alt="SMC" class="smc-logo" />
     </header>
 
-    <main class="container">
+    <main class="container" id="reportContent">
       <section class="panel inputs-panel">
         <h2>Parâmetros de Entrada</h2>
 
@@ -32,12 +36,13 @@
         <form id="configForm" class="form-grid">
           <label>
             Formato da peça
-            <select id="workpieceShape" title="Peças cilíndricas exigem garra de 3 dedos para melhor estabilidade">
+            <select id="workpieceShape">
               <option value="rectangular">Retangular</option>
               <option value="square">Quadrada</option>
               <option value="cylindrical">Cilíndrica</option>
             </select>
           </label>
+
           <div id="rectangularDimensions" class="dimension-group">
             <label>
               Largura (mm)
@@ -48,10 +53,12 @@
               <input id="height" type="number" min="0.1" step="0.1" value="30" required />
             </label>
           </div>
+
           <label id="cylindricalDimensions" class="dimension-group is-hidden">
             Diâmetro (mm)
             <input id="diameter" type="number" min="0.1" step="0.1" value="40" />
           </label>
+
           <label>
             Massa da peça (kg)
             <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
@@ -66,7 +73,7 @@
           </label>
           <label>
             Pressão de trabalho (MPa)
-            <input id="pressure" type="number" min="0.01" step="0.01" value="0.5" required />
+            <input id="pressure" type="number" min="0.1" max="0.7" step="0.01" value="0.5" required />
           </label>
           <label>
             Número de garras
@@ -80,7 +87,7 @@
             </select>
           </label>
           <label>
-            Modo de preensão
+            Modo de pega
             <select id="mode">
               <option value="external">Externa</option>
               <option value="internal">Interna</option>
@@ -89,7 +96,6 @@
           <label>
             Distância de pega (L) (mm)
             <input id="offset" type="number" min="0" step="0.1" value="0" required />
-            <small class="helper-text">A distância de pega aumenta a força necessária devido ao momento aplicado</small>
           </label>
         </form>
 
@@ -124,7 +130,7 @@
         <div id="recommendation" class="recommendation">Nenhuma garra aprovada para os parâmetros atuais.</div>
 
         <h3>Curva Força x Pressão</h3>
-        <canvas id="forceChart" aria-label="Curva de força disponível por pressão"></canvas>
+        <canvas id="forceChart" aria-label="Curva força versus pressão"></canvas>
 
         <h3>Comparação de Garras Aprovadas</h3>
         <div class="table-wrap">
@@ -133,20 +139,19 @@
               <tr>
                 <th>Modelo</th>
                 <th>Dedos</th>
-                <th>Disponível (N)</th>
-                <th>Necessária (N)</th>
+                <th>Força disponível (N)</th>
+                <th>Força necessária (N)</th>
                 <th>Excesso (N)</th>
                 <th>Margem</th>
-                <th>Status</th>
+                <th>Validação</th>
               </tr>
             </thead>
             <tbody id="comparisonTableBody"></tbody>
           </table>
         </div>
 
-        <div class="formula-note">
-          <p><strong>Regra:</strong> F_necessária = fator_de_segurança × (massa × 9,81 / atrito), APROVADO quando F_disponível ≥ F_necessária.</p>
-          <p><strong>Nota:</strong> Efeito do offset: F_necessária = F_necessária × (1 + distância_de_pega / 20).</p>
+        <div class="actions-row">
+          <button type="button" id="generatePdfBtn">Gerar Relatório PDF</button>
         </div>
       </section>
     </main>
