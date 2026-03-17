@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SMC Gripper Engineering Configurator</title>
+    <title>Configurador de Garras para Cobots</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,80 +16,80 @@
   <body>
     <header class="app-header">
       <p class="eyebrow">SMC Engineering Validation</p>
-      <h1>Multi-Gripper Web Configurator</h1>
-      <p class="subhead">Force validation tool for pneumatic gripping applications with automatic model recommendation.</p>
+      <h1>Configurador de Garras para Cobots</h1>
+      <p class="subhead">Ferramenta de validação de força para aplicações de preensão com recomendação automática de modelo</p>
     </header>
 
     <main class="container">
       <section class="panel inputs-panel">
-        <h2>Input Parameters</h2>
+        <h2>Parâmetros de Entrada</h2>
 
         <div>
-          <h3>Gripper Selection</h3>
+          <h3>Seleção de Garra</h3>
           <div id="gripperCards" class="gripper-cards" aria-live="polite"></div>
         </div>
 
         <form id="configForm" class="form-grid">
           <label>
-            Workpiece shape
-            <select id="workpieceShape" title="Cylindrical parts require 3-finger centering grip for stability">
-              <option value="rectangular">Rectangular</option>
-              <option value="square">Square</option>
-              <option value="cylindrical">Cylindrical</option>
+            Formato da peça
+            <select id="workpieceShape" title="Peças cilíndricas exigem garra de 3 dedos para melhor estabilidade">
+              <option value="rectangular">Retangular</option>
+              <option value="square">Quadrada</option>
+              <option value="cylindrical">Cilíndrica</option>
             </select>
           </label>
           <div id="rectangularDimensions" class="dimension-group">
             <label>
-              Width (mm)
+              Largura (mm)
               <input id="width" type="number" min="0.1" step="0.1" value="50" required />
             </label>
             <label>
-              Height (mm)
+              Altura (mm)
               <input id="height" type="number" min="0.1" step="0.1" value="30" required />
             </label>
           </div>
           <label id="cylindricalDimensions" class="dimension-group is-hidden">
-            Diameter (mm)
+            Diâmetro (mm)
             <input id="diameter" type="number" min="0.1" step="0.1" value="40" />
           </label>
           <label>
-            Workpiece mass (kg)
+            Massa da peça (kg)
             <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
           </label>
           <label>
-            Friction coefficient
+            Coeficiente de atrito
             <input id="friction" type="number" min="0.01" step="0.01" value="0.2" required />
           </label>
           <label>
-            Safety factor
+            Fator de segurança
             <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
           </label>
           <label>
-            Operating pressure (MPa)
+            Pressão de trabalho (MPa)
             <input id="pressure" type="number" min="0.01" step="0.01" value="0.5" required />
           </label>
           <label>
-            Number of grippers
+            Número de garras
             <input id="gripperCount" type="number" min="1" step="1" value="1" required />
           </label>
           <label>
-            Parallel operation
+            Operação em paralelo
             <select id="parallelMode">
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
+              <option value="enabled">Habilitada</option>
+              <option value="disabled">Desabilitada</option>
             </select>
           </label>
           <label>
-            Gripping mode
+            Modo de preensão
             <select id="mode">
-              <option value="external">External</option>
-              <option value="internal">Internal</option>
+              <option value="external">Externa</option>
+              <option value="internal">Interna</option>
             </select>
           </label>
           <label>
-            Offset distance (mm)
+            Distância de pega (L) (mm)
             <input id="offset" type="number" min="0" step="0.1" value="0" required />
-            <small class="helper-text">Offset distance increases required gripping force due to moment load</small>
+            <small class="helper-text">A distância de pega aumenta a força necessária devido ao momento aplicado</small>
           </label>
         </form>
 
@@ -97,41 +97,46 @@
       </section>
 
       <section class="panel results-panel">
-        <h2>Results</h2>
+        <h2>Resultados</h2>
         <div class="result-grid">
           <article>
-            <p class="metric-label">Selected model</p>
+            <p class="metric-label">Modelo selecionado</p>
             <p id="selectedModel" class="metric-value">—</p>
           </article>
           <article>
-            <p class="metric-label">Required force</p>
+            <p class="metric-label">Força necessária</p>
             <p id="requiredForce" class="metric-value">0.00 N</p>
           </article>
           <article>
-            <p class="metric-label">Available force</p>
+            <p class="metric-label">Força disponível</p>
             <p id="availableForce" class="metric-value">0.00 N</p>
           </article>
           <article>
-            <p class="metric-label">Validation</p>
+            <p class="metric-label">Margem de segurança</p>
+            <p id="safetyMargin" class="metric-value">0.00%</p>
+          </article>
+          <article>
+            <p class="metric-label">Validação</p>
             <p id="resultTag" class="result-tag">—</p>
           </article>
         </div>
 
-        <div id="recommendation" class="recommendation">No safe gripper found yet.</div>
+        <div id="recommendation" class="recommendation">Nenhuma garra aprovada para os parâmetros atuais.</div>
 
-        <h3>Force Comparison</h3>
-        <canvas id="forceChart" aria-label="Required vs Available force chart"></canvas>
+        <h3>Curva Força x Pressão</h3>
+        <canvas id="forceChart" aria-label="Curva de força disponível por pressão"></canvas>
 
-        <h3>Valid Grippers Comparison</h3>
+        <h3>Comparação de Garras Aprovadas</h3>
         <div class="table-wrap">
           <table id="comparisonTable">
             <thead>
               <tr>
-                <th>Model</th>
-                <th>Fingers</th>
-                <th>Available (N)</th>
-                <th>Required (N)</th>
-                <th>Excess (N)</th>
+                <th>Modelo</th>
+                <th>Dedos</th>
+                <th>Disponível (N)</th>
+                <th>Necessária (N)</th>
+                <th>Excesso (N)</th>
+                <th>Margem</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -140,8 +145,8 @@
         </div>
 
         <div class="formula-note">
-          <p><strong>Rule:</strong> F_required = safety_factor × (mass × 9.81 / friction), SAFE when F_available ≥ F_required.</p>
-          <p><strong>Note:</strong> Offset effect: F_required = F_required × (1 + offset_distance / 20).</p>
+          <p><strong>Regra:</strong> F_necessária = fator_de_segurança × (massa × 9,81 / atrito), APROVADO quando F_disponível ≥ F_necessária.</p>
+          <p><strong>Nota:</strong> Efeito do offset: F_necessária = F_necessária × (1 + distância_de_pega / 20).</p>
         </div>
       </section>
     </main>
