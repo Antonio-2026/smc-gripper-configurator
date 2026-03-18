@@ -142,12 +142,12 @@ function renderCards(availableGrippers, bestModel) {
       return `
         <button type="button" class="${classes.join(" ")}" data-model="${gripper.model}">
           <div class="card-head">
-            <strong>${gripper.model}</strong>
-            ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
+            <h3>${gripper.model}</h3>
           </div>
+          ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
           <div class="card-body">
-            <span>${gripper.fingers} dedos</span>
-            <span>Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}</span>
+            <p>${gripper.fingers} dedos</p>
+            <p>Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}</p>
           </div>
         </button>`;
     })
