@@ -6,7 +6,8 @@
     "allows_parallel": true,
     "gripping_force_external_per_finger": 54.2,
     "gripping_force_internal_per_finger": 72.2,
-    "reference_pressure": 0.5
+    "reference_pressure": 0.5,
+    "compatible_shapes": ["rectangular", "square"]
   },
   {
     "model": "RMHF2",
@@ -15,7 +16,8 @@
     "allows_parallel": true,
     "gripping_force_external_per_finger": 90,
     "gripping_force_internal_per_finger": 90,
-    "reference_pressure": 0.5
+    "reference_pressure": 0.5,
+    "compatible_shapes": ["rectangular", "square"]
   },
   {
     "model": "RMHS3",
@@ -24,13 +26,14 @@
     "allows_parallel": false,
     "gripping_force_external_per_finger": 118,
     "gripping_force_internal_per_finger": 130,
-    "reference_pressure": 0.5
+    "reference_pressure": 0.5,
+    "compatible_shapes": ["rectangular", "square"]
   },
   {
     "model": "MHM-25D-X7400A",
     "type": "magnetica",
     "fingers": 0,
-    "allows_parallel": false,
+    "allows_parallel": true,
     "grip_force": {
       "by_thickness": [
         { "thickness_mm": 2, "force_N": 160 },
@@ -41,6 +44,7 @@
       "min": 0.2,
       "max": 0.6
     },
-    "mass_kg": 0.59
+    "mass_kg": 0.59,
+    "compatible_shapes": ["flat", "cylindrical"]
   }
 ]

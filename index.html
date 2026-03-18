@@ -32,6 +32,17 @@
 
         <div class="section">
           <div class="section-header">
+            <h3>Tipo de Garra</h3>
+            <span class="helper-chip">Tecnologia destacada</span>
+          </div>
+          <div id="technologySelector" class="technology-grid" aria-label="Tipo de Garra">
+            <button type="button" class="technology-card selected" data-type="pneumatica">Pneumática</button>
+            <button type="button" class="technology-card" data-type="magnetica">Magnética</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
             <h3>Seleção de Garra</h3>
             <span class="helper-chip">Melhor opção destacada</span>
           </div>
@@ -45,6 +56,7 @@
               <select id="workpieceShape">
                 <option value="rectangular">Retangular</option>
                 <option value="square">Quadrada</option>
+                <option value="flat">Plana</option>
                 <option value="cylindrical">Cilíndrica</option>
               </select>
             </label>
@@ -77,15 +89,15 @@
               Fator de segurança
               <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
             </label>
-            <label>
+            <label id="pressureField">
               Pressão de trabalho (MPa)
               <input id="pressure" type="number" min="0.1" max="0.7" step="0.01" value="0.5" required />
             </label>
-            <label>
+            <label id="gripperCountField">
               Número de garras
               <input id="gripperCount" type="number" min="1" step="1" value="1" required />
             </label>
-            <label>
+            <label id="parallelModeField">
               Operação em paralelo
               <select id="parallelMode">
                 <option value="enabled">Habilitada</option>
@@ -99,7 +111,7 @@
                 <option value="internal">Interna</option>
               </select>
             </label>
-            <label>
+            <label id="offsetField">
               Distância de pega (L) (mm)
               <input id="offset" type="number" min="0" step="0.1" value="0" required />
             </label>
@@ -108,12 +120,12 @@
               <input id="thickness" type="number" min="0.1" step="0.1" value="2" />
             </label>
             <label id="materialField" class="is-hidden">
-              Material da peça
+              Tipo de material
               <input id="material" type="text" value="Aço" placeholder="Ex.: aço, ferro" />
             </label>
           </form>
           <p id="materialWarning" class="material-warning is-hidden" role="status" aria-live="polite">
-            Apenas para materiais ferromagnéticos (aço, ferro)
+            Apenas para materiais ferromagnéticos
           </p>
         </div>
 
