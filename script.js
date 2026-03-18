@@ -1,7 +1,7 @@
 const grippers = [
   { model: "RMHZ2", type: "pneumatica", fingers: 2, allows_parallel: true, external_per_finger: 54.2, internal_per_finger: 72.2, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square"] },
   { model: "RMHF2", type: "pneumatica", fingers: 2, allows_parallel: true, external_per_finger: 90, internal_per_finger: 90, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square"] },
-  { model: "RMHS3", type: "pneumatica", fingers: 3, allows_parallel: false, external_per_finger: 118, internal_per_finger: 130, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square"] },
+  { model: "RMHS3", type: "pneumatica", fingers: 3, allows_parallel: false, external_per_finger: 118, internal_per_finger: 130, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square", "cylindrical"] },
   {
     model: "MHM-25D-X7400A",
     type: "magnetica",
@@ -107,7 +107,7 @@ function getInputs() {
 }
 
 function getAllowedShapes(type = selectedType) {
-  return isMagneticType(type) ? ["flat", "cylindrical"] : ["rectangular", "square"];
+  return isMagneticType(type) ? ["flat", "cylindrical"] : ["rectangular", "square", "cylindrical"];
 }
 
 function syncShapeOptions() {
@@ -124,8 +124,38 @@ function syncShapeOptions() {
   }
 }
 
+function getShapeRestriction(type, workpieceShape) {
+  if (type !== "pneumatica") return null;
+
+  if (workpieceShape === "cylindrical") {
+    return {
+      message: "Cilíndricas requerem garra de 3 dedos",
+      matches: (gripper) => gripper.fingers === 3,
+    };
+  }
+
+  if (workpieceShape === "rectangular" || workpieceShape === "square") {
+    return {
+      message: "Peças planas utilizam garras paralelas (2 dedos)",
+      matches: (gripper) => gripper.fingers === 2,
+    };
+  }
+
+  return null;
+}
+
+function getTypeGrippers(type) {
+  return grippers.filter((gripper) => gripper.type === type);
+}
+
+function isGripperCompatibleWithShape(gripper, type, workpieceShape) {
+  const shapeCompatible = !gripper.compatible_shapes || gripper.compatible_shapes.includes(workpieceShape);
+  const restriction = getShapeRestriction(type, workpieceShape);
+  return shapeCompatible && (!restriction || restriction.matches(gripper));
+}
+
 function getCompatibleGrippers(type, workpieceShape) {
-  return grippers.filter((gripper) => gripper.type === type && (!gripper.compatible_shapes || gripper.compatible_shapes.includes(workpieceShape)));
+  return getTypeGrippers(type).filter((gripper) => isGripperCompatibleWithShape(gripper, type, workpieceShape));
 }
 
 function syncGeometryFields() {
@@ -275,15 +305,18 @@ function renderTechnologyCards() {
   });
 }
 
-function renderCards(availableGrippers, bestModel) {
-  const cardsMarkup = availableGrippers
+function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
+  const compatibleModelSet = new Set(compatibleGrippers.map((gripper) => gripper.model));
+  const cardsMarkup = allTypeGrippers
     .map((gripper) => {
+      const isCompatible = compatibleModelSet.has(gripper.model);
       const classes = ["gripper-card"];
       if (selectedGripper?.model === gripper.model) classes.push("selected");
       if (bestModel === gripper.model) classes.push("recommended");
+      if (!isCompatible) classes.push("disabled");
 
       return `
-        <button type="button" class="${classes.join(" ")}" data-model="${gripper.model}">
+        <button type="button" class="${classes.join(" ")}" data-model="${gripper.model}" ${isCompatible ? "" : 'disabled aria-disabled="true"'}>
           <div class="card-head">
             <h3>${gripper.model}</h3>
           </div>
@@ -394,27 +427,38 @@ function applyTypeDefaults(type) {
   selectedGripper = null;
 }
 
-function updateUI() {
+function updateUI(options = {}) {
+  const { skipAutoSelection = false } = options;
   const values = getInputs();
   const isMagnetic = isMagneticType(values.type);
   const hasInvalidValues = values.pressure <= 0 || values.mass < 0 || values.thickness <= 0 || values.gripperCount <= 0 || values.safetyFactor < 1 || (!isMagnetic && values.friction <= 0);
   if (hasInvalidValues) return;
 
+  const allTypeGrippers = getTypeGrippers(values.type);
   const compatibleGrippers = getCompatibleGrippers(values.type, values.workpieceShape);
+  const shapeRestriction = getShapeRestriction(values.type, values.workpieceShape);
+
+  let compatibilityMessage = shapeRestriction?.message || "";
   if (selectedGripper && !compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model)) {
     selectedGripper = null;
-    geometryCompatibilityMessageEl.textContent = "A garra selecionada não é compatível com o formato da peça.";
+    compatibilityMessage = `${shapeRestriction?.message ? `${shapeRestriction.message}. ` : ""}A garra selecionada foi removida por incompatibilidade geométrica.`;
   } else if (!compatibleGrippers.length) {
-    geometryCompatibilityMessageEl.textContent = "Não há modelos compatíveis com esta combinação.";
-  } else {
-    geometryCompatibilityMessageEl.textContent = "";
+    compatibilityMessage = shapeRestriction?.message || "Não há modelos compatíveis com esta combinação.";
+  }
+  geometryCompatibilityMessageEl.textContent = compatibilityMessage;
+
+  const hasValidCombination = !selectedGripper || isGripperCompatibleWithShape(selectedGripper, values.type, values.workpieceShape);
+  if (!hasValidCombination) {
+    setNoSelectionState("Combinação inválida. Ajuste o formato da peça ou selecione uma garra compatível.");
+    renderCards(allTypeGrippers, compatibleGrippers, null);
+    return;
   }
 
   const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
   const approved = results.filter((result) => result.safe).sort((a, b) => a.excessForce - b.excessForce);
   const best = approved[0] || null;
 
-  if (!selectedGripper && compatibleGrippers.length) {
+  if (!selectedGripper && compatibleGrippers.length && !skipAutoSelection) {
     selectedGripper = compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null;
   }
 
@@ -423,17 +467,20 @@ function updateUI() {
   syncGeometryFields();
   syncGripperSpecificFields();
   syncParallelControlsForSelection();
-  renderCards(compatibleGrippers, best?.model || null);
+  renderCards(allTypeGrippers, compatibleGrippers, best?.model || null);
 
   if (!selectedGripper) {
-    setNoSelectionState(best ? `Melhor opção disponível: ${best.model}.` : "Nenhuma garra aprovada para os parâmetros atuais.");
+    setNoSelectionState(
+      compatibilityMessage || (best ? `Melhor opção disponível: ${best.model}.` : "Nenhuma garra aprovada para os parâmetros atuais."),
+    );
     renderTable(results, best?.model || null);
     return;
   }
 
   const selectedResult = results.find((result) => result.model === selectedGripper.model);
   if (!selectedResult) {
-    setNoSelectionState();
+    setNoSelectionState("Combinação inválida. Ajuste o formato da peça ou selecione uma garra compatível.");
+    renderTable(results, best?.model || null);
     return;
   }
 
@@ -455,17 +502,28 @@ function updateUI() {
 }
 
 function handleFormChange(event) {
-  if (event.target.id === "workpieceShape") syncGeometryFields();
+  let skipAutoSelection = false;
+
+  if (event.target.id === "workpieceShape") {
+    syncGeometryFields();
+
+    if (selectedGripper && !isGripperCompatibleWithShape(selectedGripper, selectedType, workpieceShapeEl.value)) {
+      selectedGripper = null;
+      skipAutoSelection = true;
+    }
+  }
+
   if (event.target.id === "parallelMode") {
     gripperCountEl.disabled = parallelModeEl.value !== "enabled";
     if (parallelModeEl.value === "disabled") gripperCountEl.value = 1;
   }
-  updateUI();
+
+  updateUI({ skipAutoSelection });
 }
 
 function handleCardSelection(event) {
   const trigger = event.target.closest("[data-model]");
-  if (!trigger) return;
+  if (!trigger || trigger.disabled) return;
 
   selectedGripper = grippers.find((gripper) => gripper.model === trigger.dataset.model && gripper.type === selectedType) || null;
   updateUI();
