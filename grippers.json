@@ -1,6 +1,7 @@
 [
   {
     "model": "RMHZ2",
+    "type": "pneumatica",
     "fingers": 2,
     "allows_parallel": true,
     "gripping_force_external_per_finger": 54.2,
@@ -9,6 +10,7 @@
   },
   {
     "model": "RMHF2",
+    "type": "pneumatica",
     "fingers": 2,
     "allows_parallel": true,
     "gripping_force_external_per_finger": 90,
@@ -17,10 +19,28 @@
   },
   {
     "model": "RMHS3",
+    "type": "pneumatica",
     "fingers": 3,
     "allows_parallel": false,
     "gripping_force_external_per_finger": 118,
     "gripping_force_internal_per_finger": 130,
     "reference_pressure": 0.5
+  },
+  {
+    "model": "MHM-25D-X7400A",
+    "type": "magnetica",
+    "fingers": 0,
+    "allows_parallel": false,
+    "grip_force": {
+      "by_thickness": [
+        { "thickness_mm": 2, "force_N": 160 },
+        { "thickness_mm": 6, "force_N": 200 }
+      ]
+    },
+    "pressure": {
+      "min": 0.2,
+      "max": 0.6
+    },
+    "mass_kg": 0.59
   }
 ]

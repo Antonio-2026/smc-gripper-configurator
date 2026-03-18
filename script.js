@@ -1,7 +1,22 @@
 const grippers = [
-  { model: "RMHZ2", fingers: 2, allows_parallel: true, external_per_finger: 54.2, internal_per_finger: 72.2, reference_pressure: 0.5 },
-  { model: "RMHF2", fingers: 2, allows_parallel: true, external_per_finger: 90, internal_per_finger: 90, reference_pressure: 0.5 },
-  { model: "RMHS3", fingers: 3, allows_parallel: false, external_per_finger: 118, internal_per_finger: 130, reference_pressure: 0.5 },
+  { model: "RMHZ2", type: "pneumatica", fingers: 2, allows_parallel: true, external_per_finger: 54.2, internal_per_finger: 72.2, reference_pressure: 0.5 },
+  { model: "RMHF2", type: "pneumatica", fingers: 2, allows_parallel: true, external_per_finger: 90, internal_per_finger: 90, reference_pressure: 0.5 },
+  { model: "RMHS3", type: "pneumatica", fingers: 3, allows_parallel: false, external_per_finger: 118, internal_per_finger: 130, reference_pressure: 0.5 },
+  {
+    model: "MHM-25D-X7400A",
+    type: "magnetica",
+    fingers: 0,
+    allows_parallel: false,
+    grip_force: {
+      by_thickness: [
+        { thickness_mm: 2, force_N: 160 },
+        { thickness_mm: 6, force_N: 200 },
+      ],
+    },
+    pressure: { min: 0.2, max: 0.6 },
+    mass_kg: 0.59,
+    compatible_shapes: ["rectangular", "square"],
+  },
 ];
 
 let selectedGripper = null;
@@ -24,6 +39,11 @@ const cylindricalDimensionsEl = document.getElementById("cylindricalDimensions")
 const widthEl = document.getElementById("width");
 const heightEl = document.getElementById("height");
 const diameterEl = document.getElementById("diameter");
+const frictionFieldEl = document.getElementById("frictionField");
+const modeFieldEl = document.getElementById("modeField");
+const thicknessFieldEl = document.getElementById("thicknessField");
+const materialFieldEl = document.getElementById("materialField");
+const materialWarningEl = document.getElementById("materialWarning");
 const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
 
 const chart = new Chart(document.getElementById("forceChart"), {
@@ -67,13 +87,23 @@ function getInputs() {
     offset: Number(document.getElementById("offset").value),
     parallelMode: parallelModeEl.value,
     gripperCount: Number(gripperCountEl.value),
+    thickness: Number(document.getElementById("thickness").value),
+    material: document.getElementById("material").value.trim(),
   };
 }
 
+function isMagneticGripper(gripper) {
+  return gripper?.type === "magnetica";
+}
+
 function getCompatibleGrippers(workpieceShape) {
-  return workpieceShape === "cylindrical"
-    ? grippers.filter((gripper) => gripper.fingers === 3)
-    : grippers.filter((gripper) => gripper.fingers === 2);
+  return grippers.filter((gripper) => {
+    if (isMagneticGripper(gripper)) {
+      return !gripper.compatible_shapes || gripper.compatible_shapes.includes(workpieceShape);
+    }
+
+    return workpieceShape === "cylindrical" ? gripper.fingers === 3 : gripper.fingers === 2;
+  });
 }
 
 function syncGeometryFields() {
@@ -83,6 +113,21 @@ function syncGeometryFields() {
   widthEl.disabled = isCylindrical;
   heightEl.disabled = isCylindrical;
   diameterEl.disabled = !isCylindrical;
+}
+
+function syncGripperSpecificFields() {
+  const isMagnetic = isMagneticGripper(selectedGripper);
+
+  frictionFieldEl.classList.toggle("is-hidden", isMagnetic);
+  modeFieldEl.classList.toggle("is-hidden", isMagnetic);
+  thicknessFieldEl.classList.toggle("is-hidden", !isMagnetic);
+  materialFieldEl.classList.toggle("is-hidden", !isMagnetic);
+  materialWarningEl.classList.toggle("is-hidden", !isMagnetic);
+
+  document.getElementById("friction").disabled = isMagnetic;
+  document.getElementById("mode").disabled = isMagnetic;
+  document.getElementById("thickness").disabled = !isMagnetic;
+  document.getElementById("material").disabled = !isMagnetic;
 }
 
 function getPerFingerForce(gripper, mode) {
@@ -95,10 +140,54 @@ function getSafetyMarginClass(marginPercent) {
   return "margin-safe";
 }
 
-function calculateForGripper(gripper, values) {
-  const perFingerForce = getPerFingerForce(gripper, values.mode);
+function interpolateForceByThickness(byThickness, thickness) {
+  const sortedPoints = [...byThickness].sort((a, b) => a.thickness_mm - b.thickness_mm);
+  if (thickness <= sortedPoints[0].thickness_mm) return sortedPoints[0].force_N;
+
+  const lastPoint = sortedPoints[sortedPoints.length - 1];
+  if (thickness >= lastPoint.thickness_mm) return lastPoint.force_N;
+
+  for (let index = 0; index < sortedPoints.length - 1; index += 1) {
+    const currentPoint = sortedPoints[index];
+    const nextPoint = sortedPoints[index + 1];
+
+    if (thickness >= currentPoint.thickness_mm && thickness <= nextPoint.thickness_mm) {
+      return currentPoint.force_N + ((nextPoint.force_N - currentPoint.force_N) * (thickness - currentPoint.thickness_mm)) / (nextPoint.thickness_mm - currentPoint.thickness_mm);
+    }
+  }
+
+  return lastPoint.force_N;
+}
+
+function calculateRequiredForce(values) {
   const weight = values.mass * 9.81;
-  const requiredForce = values.safetyFactor * (weight / values.friction) * (1 + values.offset / 20);
+  return values.safetyFactor * (weight / values.friction) * (1 + values.offset / 20);
+}
+
+function calculateForGripper(gripper, values) {
+  const requiredForce = calculateRequiredForce(values);
+
+  if (isMagneticGripper(gripper)) {
+    const baseAvailableForce = interpolateForceByThickness(gripper.grip_force.by_thickness, values.thickness);
+    const availableForce = baseAvailableForce;
+    const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
+
+    return {
+      model: gripper.model,
+      type: gripper.type,
+      fingers: gripper.fingers,
+      requiredForce,
+      availableForce,
+      excessForce: availableForce - requiredForce,
+      safe: availableForce >= requiredForce,
+      marginPercent,
+      effectiveGripperCount: 1,
+      baseAvailableForce,
+      referencePressure: null,
+    };
+  }
+
+  const perFingerForce = getPerFingerForce(gripper, values.mode);
   const parallelEnabled = values.parallelMode === "enabled";
   const requestedCount = parallelEnabled ? values.gripperCount : 1;
   const effectiveGripperCount = gripper.fingers === 3 || !gripper.allows_parallel ? 1 : requestedCount;
@@ -108,6 +197,7 @@ function calculateForGripper(gripper, values) {
 
   return {
     model: gripper.model,
+    type: gripper.type,
     fingers: gripper.fingers,
     requiredForce,
     availableForce,
@@ -116,12 +206,23 @@ function calculateForGripper(gripper, values) {
     marginPercent,
     effectiveGripperCount,
     baseAvailableForce,
+    referencePressure: gripper.reference_pressure,
   };
 }
 
 function buildPressureCurve(result, referencePressure) {
   const pressureSteps = [];
   const forceSteps = [];
+
+  if (!referencePressure) {
+    for (let pressure = 0.1; pressure <= 0.700001; pressure += 0.05) {
+      const roundedPressure = Number(pressure.toFixed(2));
+      pressureSteps.push(roundedPressure);
+      forceSteps.push(result.baseAvailableForce);
+    }
+
+    return { pressureSteps, forceSteps };
+  }
 
   for (let pressure = 0.1; pressure <= 0.700001; pressure += 0.05) {
     const roundedPressure = Number(pressure.toFixed(2));
@@ -146,7 +247,7 @@ function renderCards(availableGrippers, bestModel) {
           </div>
           ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
           <div class="card-body">
-            <p>${gripper.fingers} dedos</p>
+            <p>${isMagneticGripper(gripper) ? "Magnética" : `${gripper.fingers} dedos`}</p>
             <p>Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}</p>
           </div>
         </button>`;
@@ -169,7 +270,7 @@ function renderTable(results, bestModel) {
       (result) => `
         <tr class="${result.model === bestModel ? "best-row" : ""}">
           <td>${result.model}</td>
-          <td>${result.fingers}</td>
+          <td>${result.type === "magnetica" ? "—" : result.fingers}</td>
           <td>${result.availableForce.toFixed(2)}</td>
           <td>${result.requiredForce.toFixed(2)}</td>
           <td>${result.excessForce.toFixed(2)}</td>
@@ -187,7 +288,7 @@ function syncParallelControlsForSelection() {
     return;
   }
 
-  const onlySingle = selectedGripper.fingers === 3 || !selectedGripper.allows_parallel;
+  const onlySingle = isMagneticGripper(selectedGripper) || selectedGripper.fingers === 3 || !selectedGripper.allows_parallel;
   if (onlySingle) {
     parallelModeEl.value = "disabled";
     parallelModeEl.disabled = true;
@@ -231,7 +332,7 @@ function updateChart(selectedResult, pressure, referencePressure) {
 
 function updateUI() {
   const values = getInputs();
-  if (values.friction <= 0 || values.pressure <= 0 || values.mass < 0) return;
+  if (values.friction <= 0 || values.pressure <= 0 || values.mass < 0 || values.thickness <= 0) return;
 
   const compatibleGrippers = getCompatibleGrippers(values.workpieceShape);
   if (selectedGripper && !compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model)) {
@@ -249,6 +350,7 @@ function updateUI() {
     selectedGripper = compatibleGrippers.find((gripper) => gripper.model === best.model) || null;
   }
 
+  syncGripperSpecificFields();
   syncParallelControlsForSelection();
   renderCards(compatibleGrippers, best?.model || null);
 
@@ -277,7 +379,7 @@ function updateUI() {
     : "Nenhuma garra APROVADA para os parâmetros atuais.";
   recommendationEl.classList.toggle("is-safe", Boolean(best));
 
-  updateChart(selectedResult, values.pressure, selectedGripper.reference_pressure);
+  updateChart(selectedResult, values.pressure, selectedResult.referencePressure);
   renderTable(results, best?.model || null);
 }
 
@@ -295,11 +397,13 @@ function handleCardSelection(event) {
   if (!trigger) return;
 
   selectedGripper = grippers.find((gripper) => gripper.model === trigger.dataset.model) || null;
+  syncGripperSpecificFields();
   updateUI();
 }
 
 function init() {
   syncGeometryFields();
+  syncGripperSpecificFields();
   gripperCardsEl.addEventListener("click", handleCardSelection);
   form.addEventListener("input", updateUI);
   form.addEventListener("change", handleFormChange);
