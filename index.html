@@ -16,138 +16,157 @@
   <body>
     <header class="app-header header">
       <div>
+        <p class="eyebrow">SMC Industrial Automation</p>
         <h1>Configurador de Garras para Cobots</h1>
-        <p class="subhead">Ferramenta de validação de força para aplicações de preensão com recomendação automática de modelo</p>
+        <p class="subhead">Validação instantânea de força com recomendação automática para atendimento em campo.</p>
       </div>
       <img src="smc-logo.svg" alt="SMC" class="smc-logo" />
     </header>
 
     <main class="main-container">
       <section class="panel left-panel">
-        <h2>Parâmetros de Entrada</h2>
-
-        <div>
-          <h3>Seleção de Garra</h3>
-          <div id="gripperCards" class="gripper-cards" aria-live="polite"></div>
+        <div class="section">
+          <h2>Parâmetros de Entrada</h2>
+          <p class="section-description">Defina as condições da aplicação e veja a decisão imediatamente.</p>
         </div>
 
-        <form id="configForm" class="form-grid">
-          <label>
-            Formato da peça
-            <select id="workpieceShape">
-              <option value="rectangular">Retangular</option>
-              <option value="square">Quadrada</option>
-              <option value="cylindrical">Cilíndrica</option>
-            </select>
-          </label>
-
-          <div id="rectangularDimensions" class="dimension-group">
-            <label>
-              Largura (mm)
-              <input id="width" type="number" min="0.1" step="0.1" value="50" required />
-            </label>
-            <label>
-              Altura (mm)
-              <input id="height" type="number" min="0.1" step="0.1" value="30" required />
-            </label>
+        <div class="section">
+          <div class="section-header">
+            <h3>Seleção de Garra</h3>
+            <span class="helper-chip">Melhor opção destacada</span>
           </div>
+          <div id="gripperCards" class="gripper-grid" aria-live="polite"></div>
+        </div>
 
-          <label id="cylindricalDimensions" class="dimension-group is-hidden">
-            Diâmetro (mm)
-            <input id="diameter" type="number" min="0.1" step="0.1" value="40" />
-          </label>
+        <div class="section section-form">
+          <form id="configForm" class="form-grid">
+            <label>
+              Formato da peça
+              <select id="workpieceShape">
+                <option value="rectangular">Retangular</option>
+                <option value="square">Quadrada</option>
+                <option value="cylindrical">Cilíndrica</option>
+              </select>
+            </label>
 
-          <label>
-            Massa da peça (kg)
-            <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
-          </label>
-          <label>
-            Coeficiente de atrito
-            <input id="friction" type="number" min="0.01" step="0.01" value="0.2" required />
-          </label>
-          <label>
-            Fator de segurança
-            <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
-          </label>
-          <label>
-            Pressão de trabalho (MPa)
-            <input id="pressure" type="number" min="0.1" max="0.7" step="0.01" value="0.5" required />
-          </label>
-          <label>
-            Número de garras
-            <input id="gripperCount" type="number" min="1" step="1" value="1" required />
-          </label>
-          <label>
-            Operação em paralelo
-            <select id="parallelMode">
-              <option value="enabled">Habilitada</option>
-              <option value="disabled">Desabilitada</option>
-            </select>
-          </label>
-          <label>
-            Modo de pega
-            <select id="mode">
-              <option value="external">Externa</option>
-              <option value="internal">Interna</option>
-            </select>
-          </label>
-          <label>
-            Distância de pega (L) (mm)
-            <input id="offset" type="number" min="0" step="0.1" value="0" required />
-          </label>
-        </form>
+            <div id="rectangularDimensions" class="dimension-group">
+              <label>
+                Largura (mm)
+                <input id="width" type="number" min="0.1" step="0.1" value="50" required />
+              </label>
+              <label>
+                Altura (mm)
+                <input id="height" type="number" min="0.1" step="0.1" value="30" required />
+              </label>
+            </div>
+
+            <label id="cylindricalDimensions" class="dimension-group is-hidden">
+              Diâmetro (mm)
+              <input id="diameter" type="number" min="0.1" step="0.1" value="40" />
+            </label>
+
+            <label>
+              Massa da peça (kg)
+              <input id="mass" type="number" min="0" step="0.01" value="1.2" required />
+            </label>
+            <label>
+              Coeficiente de atrito
+              <input id="friction" type="number" min="0.01" step="0.01" value="0.2" required />
+            </label>
+            <label>
+              Fator de segurança
+              <input id="safetyFactor" type="number" min="1" step="0.1" value="2" required />
+            </label>
+            <label>
+              Pressão de trabalho (MPa)
+              <input id="pressure" type="number" min="0.1" max="0.7" step="0.01" value="0.5" required />
+            </label>
+            <label>
+              Número de garras
+              <input id="gripperCount" type="number" min="1" step="1" value="1" required />
+            </label>
+            <label>
+              Operação em paralelo
+              <select id="parallelMode">
+                <option value="enabled">Habilitada</option>
+                <option value="disabled">Desabilitada</option>
+              </select>
+            </label>
+            <label>
+              Modo de pega
+              <select id="mode">
+                <option value="external">Externa</option>
+                <option value="internal">Interna</option>
+              </select>
+            </label>
+            <label>
+              Distância de pega (L) (mm)
+              <input id="offset" type="number" min="0" step="0.1" value="0" required />
+            </label>
+          </form>
+        </div>
 
         <p id="geometryCompatibilityMessage" class="compatibility-message" role="status" aria-live="polite"></p>
       </section>
 
       <section class="panel right-panel">
-        <div>
+        <div class="section decision-panel">
+          <p class="decision-label">Decisão instantânea</p>
+          <p id="resultTag" class="validation">—</p>
+          <p id="recommendation" class="recommendation">Nenhuma garra aprovada para os parâmetros atuais.</p>
+        </div>
+
+        <div class="section">
           <h2>Resultados</h2>
           <div class="result-grid">
-          <article>
-            <p class="metric-label">Modelo selecionado</p>
-            <p id="selectedModel" class="metric-value">—</p>
-          </article>
-          <article>
-            <p class="metric-label">Força necessária</p>
-            <p id="requiredForce" class="metric-value">0.00 N</p>
-          </article>
-          <article>
-            <p class="metric-label">Força disponível</p>
-            <p id="availableForce" class="metric-value">0.00 N</p>
-          </article>
-          <article>
-            <p class="metric-label">Margem de segurança</p>
-            <p id="safetyMargin" class="metric-value">0.00%</p>
-          </article>
-          <article>
-            <p class="metric-label">Validação</p>
-            <p id="resultTag" class="validation">—</p>
-          </article>
+            <article>
+              <p class="metric-label">Modelo selecionado</p>
+              <p id="selectedModel" class="metric-value">—</p>
+            </article>
+            <article>
+              <p class="metric-label">Força necessária</p>
+              <p id="requiredForce" class="metric-value">0.00 N</p>
+            </article>
+            <article>
+              <p class="metric-label">Força disponível</p>
+              <p id="availableForce" class="metric-value">0.00 N</p>
+            </article>
+            <article>
+              <p class="metric-label">Margem de segurança</p>
+              <p id="safetyMargin" class="metric-value">0.00%</p>
+            </article>
+          </div>
         </div>
 
-        <div id="recommendation" class="recommendation">Nenhuma garra aprovada para os parâmetros atuais.</div>
-
-        <h3>Curva Força x Pressão</h3>
-        <canvas id="forceChart" aria-label="Curva força versus pressão"></canvas>
-
-        <h3>Comparação de Garras Aprovadas</h3>
-        <div class="table-wrap">
-          <table id="comparisonTable">
-            <thead>
-              <tr>
-                <th>Modelo</th>
-                <th>Dedos</th>
-                <th>Força disponível (N)</th>
-                <th>Força necessária (N)</th>
-                <th>Excesso (N)</th>
-                <th>Margem</th>
-                <th>Validação</th>
-              </tr>
-            </thead>
-            <tbody id="comparisonTableBody"></tbody>
-          </table>
+        <div class="section chart-section">
+          <div class="section-header">
+            <h3>Curva Força x Pressão</h3>
+            <span class="helper-chip">Atualização automática</span>
+          </div>
+          <canvas id="forceChart" aria-label="Curva força versus pressão"></canvas>
         </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h3>Comparação de Garras Aprovadas</h3>
+            <span class="helper-chip">Foco comercial</span>
+          </div>
+          <div class="table-wrap">
+            <table id="comparisonTable">
+              <thead>
+                <tr>
+                  <th>Modelo</th>
+                  <th>Dedos</th>
+                  <th>Força disponível (N)</th>
+                  <th>Força necessária (N)</th>
+                  <th>Excesso (N)</th>
+                  <th>Margem</th>
+                  <th>Validação</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>

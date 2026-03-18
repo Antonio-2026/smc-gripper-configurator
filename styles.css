@@ -1,24 +1,32 @@
 :root {
-  --bg: #f2f4f7;
+  --bg: #eef2f7;
   --panel: #ffffff;
   --line: #d0d7e2;
   --text: #1a2634;
   --muted: #5e6d80;
   --accent: #0072ce;
+  --accent-dark: #005a9f;
   --safe: #16a34a;
   --unsafe: #dc2626;
   --warn: #c28a00;
+  --shadow: 0 14px 28px rgba(18, 41, 66, 0.08);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, #f9fafc 0%, #eff3f8 100%);
+  background: linear-gradient(180deg, #f9fafc 0%, var(--bg) 100%);
 }
 
 .app-header {
@@ -32,32 +40,60 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   background: #000;
   padding: 10px 20px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.eyebrow {
+  margin: 0 0 0.15rem;
+  color: #7cc4ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
 }
 
 h1 {
-  margin: 0.25rem 0;
+  margin-bottom: 0.35rem;
   color: #fff;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+}
+
+h2 {
+  margin-bottom: 0.35rem;
+}
+
+h3 {
+  margin-bottom: 0;
 }
 
 .subhead {
   margin: 0;
+  max-width: 52rem;
   color: #d0d7e2;
 }
 
 .header img,
 .smc-logo {
-  height: 64px;
+  height: 60px;
   width: auto;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .main-container {
   display: flex;
-  gap: 1rem;
+  gap: 20px;
   align-items: flex-start;
-  padding: 1rem;
+  padding: 16px;
 }
 
 .left-panel,
@@ -67,27 +103,83 @@ h1 {
 
 .panel {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 10px 24px rgba(18, 41, 66, 0.06);
+  border: 1px solid rgba(208, 215, 226, 0.9);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
 }
 
-.gripper-cards {
+.section {
+  margin-bottom: 16px;
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.section-description {
+  margin: 0;
+  color: var(--muted);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.helper-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: #edf5fd;
+  color: var(--accent-dark);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.decision-panel {
+  border: 1px solid #d8e4f1;
+  border-radius: 14px;
+  padding: 18px;
+  background: linear-gradient(135deg, #f7fbff 0%, #eef5fb 100%);
+}
+
+.decision-label {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gripper-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 12px;
 }
 
 .gripper-card {
   border: 1px solid var(--line);
   background: #f8fafc;
-  border-radius: 10px;
-  padding: 0.7rem;
+  border-radius: 12px;
+  padding: 14px;
   text-align: left;
   cursor: pointer;
-  color: #111 !important;
+  color: #111;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.gripper-card:hover,
+.gripper-card:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 20px rgba(0, 114, 206, 0.12);
+  outline: none;
 }
 
 .gripper-card.selected {
@@ -104,21 +196,24 @@ h1 {
 .card-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .badge {
   font-size: 0.72rem;
-  padding: 0.12rem 0.5rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 999px;
   background: var(--safe);
   color: #fff;
+  white-space: nowrap;
 }
 
 .card-body {
-  margin-top: 0.45rem;
+  margin-top: 0.65rem;
   display: grid;
-  font-size: 0.85rem;
+  gap: 0.25rem;
+  font-size: 0.9rem;
   color: var(--muted);
 }
 
@@ -142,7 +237,7 @@ h1 {
 label {
   display: grid;
   gap: 0.35rem;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.92rem;
 }
 
@@ -155,6 +250,12 @@ select {
   font-size: 16px;
   padding: 10px;
   background: #fff;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid rgba(0, 114, 206, 0.15);
+  border-color: var(--accent);
 }
 
 button {
@@ -173,13 +274,12 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.8rem;
-  margin-bottom: 1rem;
 }
 
 .result-grid article {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 0.9rem;
   background: #fbfcfd;
 }
 
@@ -191,7 +291,7 @@ button {
 
 .metric-value {
   margin: 0.35rem 0 0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 
@@ -203,6 +303,7 @@ button {
   margin: 0.35rem 0 0;
   font-size: 20px;
   font-weight: bold;
+  text-align: center;
 }
 
 .safe {
@@ -214,10 +315,10 @@ button {
 }
 
 .recommendation {
-  margin-bottom: 1rem;
+  margin: 0.75rem 0 0;
   border: 1px solid #c8d4e3;
-  border-radius: 9px;
-  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  padding: 0.8rem 0.95rem;
   background: #f8fbff;
   color: #2b3e53;
   font-weight: 600;
@@ -228,25 +329,30 @@ button {
   background: #eef7ef;
 }
 
+.chart-section {
+  min-height: 340px;
+}
+
 #forceChart {
   width: 100%;
   max-height: 260px;
 }
 
 .table-wrap {
-  margin-top: 0.8rem;
+  margin-top: 0.25rem;
   overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 620px;
 }
 
 th,
 td {
   border: 1px solid var(--line);
-  padding: 0.45rem;
+  padding: 0.55rem;
   font-size: 0.84rem;
   text-align: center;
 }
@@ -262,15 +368,14 @@ th {
 .compatibility-message {
   margin-top: 0.65rem;
   color: var(--warn);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
 @media (max-width: 960px) {
   .form-grid,
   .result-grid,
-  .dimension-group,
-  .gripper-cards {
+  .dimension-group {
     grid-template-columns: 1fr;
   }
 }
@@ -278,6 +383,7 @@ th {
 @media (max-width: 768px) {
   .main-container {
     flex-direction: column;
+    padding: 12px;
   }
 
   .left-panel,
@@ -285,8 +391,25 @@ th {
     width: 100%;
   }
 
+  .gripper-grid {
+    grid-template-columns: 1fr;
+  }
+
   .header {
     align-items: flex-start;
-    gap: 0.8rem;
+    padding: 10px 14px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  table {
+    min-width: 560px;
   }
 }
