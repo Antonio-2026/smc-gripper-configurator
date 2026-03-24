@@ -38,8 +38,12 @@
           <div id="technologySelector" class="technology-grid" aria-label="Tipo de Garra">
             <button type="button" class="technology-card selected" data-type="pneumatica">Pneumática</button>
             <button type="button" class="technology-card" data-type="magnetica">Magnética</button>
+            <button type="button" class="technology-card" data-type="eletrica">Elétrica</button>
           </div>
         </div>
+
+        <p id="smcWarning" class="material-warning is-hidden" role="status" aria-live="polite"></p>
+        <p id="electricTechnicalNote" class="section-description is-hidden">"A força efetiva varia conforme a distância de pega (L), conforme catálogo SMC LEHR Series"</p>
 
         <div class="section">
           <div class="section-header">
@@ -97,6 +101,18 @@
               Número de garras
               <input id="gripperCount" type="number" min="1" step="1" value="1" required />
             </label>
+            <label id="mountingTypeField" class="is-hidden">
+              Tipo de montagem
+              <select id="mountingType">
+                <option value="standard">Standard</option>
+                <option value="longitudinal">Longitudinal</option>
+              </select>
+            </label>
+            <label id="configuredForceField" class="is-hidden">
+              Força configurada da garra (N)
+              <input id="configuredForce" type="number" min="60" max="140" step="1" value="100" />
+            </label>
+
             <label id="parallelModeField">
               Operação em paralelo
               <select id="parallelMode">
@@ -147,11 +163,15 @@
               <p id="selectedModel" class="metric-value">—</p>
             </article>
             <article>
+              <p class="metric-label">Força configurada</p>
+              <p id="configuredForceResult" class="metric-value">—</p>
+            </article>
+            <article>
               <p class="metric-label">Força necessária</p>
               <p id="requiredForce" class="metric-value">0.00 N</p>
             </article>
             <article>
-              <p class="metric-label">Força disponível</p>
+              <p class="metric-label">Força efetiva</p>
               <p id="availableForce" class="metric-value">0.00 N</p>
             </article>
             <article>
@@ -163,7 +183,7 @@
 
         <div class="section chart-section">
           <div class="section-header">
-            <h3>Curva Força x Pressão</h3>
+            <h3 id="chartTitle">Curva Força x Pressão</h3>
             <span class="helper-chip">Atualização automática</span>
           </div>
           <canvas id="forceChart" aria-label="Curva força versus pressão"></canvas>
