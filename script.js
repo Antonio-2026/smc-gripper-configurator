@@ -17,7 +17,7 @@ const grippers = [
     mass_kg: 0.59,
     compatible_shapes: ["flat", "cylindrical"],
   },
-  { model: "LEHR32", type: "eletrica", mounting: "standard", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
+  { model: "LEHR32 Standard", type: "eletrica", mounting: "standard", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
   { model: "LEHR32 Longitudinal", type: "eletrica", mounting: "longitudinal", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
 ];
 
@@ -250,11 +250,12 @@ function interpolateForceByThickness(byThickness, thickness) {
   return lastPoint.force_N;
 }
 
-function getElectricReductionFactor(offsetMm) {
-  if (offsetMm <= 10) return 1;
-  if (offsetMm <= 50) return 1 - ((offsetMm - 10) / 40) * 0.4;
-  if (offsetMm <= 100) return 0.6 - ((offsetMm - 50) / 50) * 0.2;
-  return 0.4;
+function getReductionFactor(offsetMm) {
+  if (offsetMm <= 10) return 1.0;
+  if (offsetMm <= 20) return 0.9;
+  if (offsetMm <= 50) return 0.6;
+  if (offsetMm <= 100) return 0.4;
+  return 0.35;
 }
 
 function calculateRequiredForce(values) {
@@ -297,9 +298,9 @@ function calculateForGripper(gripper, values) {
   }
 
   if (isElectricGripper(gripper)) {
-    const reductionFactor = getElectricReductionFactor(values.offset);
-    const realForce = values.configuredForce * reductionFactor;
-    const availableForce = realForce * Math.max(1, values.gripperCount);
+    const reductionFactor = getReductionFactor(values.offset);
+    const effectiveForce = values.configuredForce * reductionFactor;
+    const availableForce = effectiveForce * Math.max(1, values.gripperCount);
     const marginPercent = requiredForce === 0 ? 0 : ((availableForce - requiredForce) / requiredForce) * 100;
 
     return {
@@ -312,7 +313,7 @@ function calculateForGripper(gripper, values) {
       safe: availableForce >= requiredForce,
       marginPercent,
       effectiveGripperCount: Math.max(1, values.gripperCount),
-      baseAvailableForce: realForce,
+      baseAvailableForce: effectiveForce,
       configuredForce: values.configuredForce,
       referencePressure: null,
       forceReductionFactor: reductionFactor,
@@ -375,7 +376,7 @@ function buildElectricCurves(values) {
     const colors = ["#0072ce", "#16a34a", "#dc2626"];
     return {
       label: `${configuredForce} N`,
-      data: distances.map((distance) => Number((configuredForce * getElectricReductionFactor(distance)).toFixed(2))),
+      data: distances.map((distance) => Number((configuredForce * getReductionFactor(distance)).toFixed(2))),
       borderColor: colors[index],
       backgroundColor: "transparent",
       fill: false,
@@ -386,7 +387,7 @@ function buildElectricCurves(values) {
 
   datasets.push({
     label: "Ponto atual",
-    data: distances.map((distance) => (distance === Math.round(values.offset / 5) * 5 ? Number((values.configuredForce * getElectricReductionFactor(values.offset)).toFixed(2)) : null)),
+    data: distances.map((distance) => (distance === Math.round(values.offset / 5) * 5 ? Number((values.configuredForce * getReductionFactor(values.offset)).toFixed(2)) : null)),
     borderColor: "#f59e0b",
     backgroundColor: "#f59e0b",
     showLine: false,
@@ -586,6 +587,7 @@ function updateUI(options = {}) {
 
   const allTypeGrippers = getTypeGrippers(values.type);
   const compatibleGrippers = getCompatibleGrippers(values.type, values.workpieceShape, values.mountingType);
+  const electricRecommendationPool = isElectric ? getTypeGrippers(values.type).filter((gripper) => isGripperCompatibleWithShape(gripper, values.type, values.workpieceShape)) : compatibleGrippers;
   const shapeRestriction = getShapeRestriction(values.type, values.workpieceShape);
 
   let compatibilityMessage = shapeRestriction?.message || "";
@@ -607,7 +609,7 @@ function updateUI(options = {}) {
   const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
   const approved = results.filter((result) => result.safe).sort((a, b) => a.excessForce - b.excessForce);
   const best = approved[0] || null;
-  const electricBest = isElectric ? getElectricBestRecommendation(compatibleGrippers, values) : null;
+  const electricBest = isElectric ? getElectricBestRecommendation(electricRecommendationPool, values) : null;
 
   if (!selectedGripper && compatibleGrippers.length && !skipAutoSelection) {
     selectedGripper = compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null;
@@ -658,7 +660,7 @@ function updateUI(options = {}) {
 
   const pieceWeight = values.mass * 9.81;
   if (isElectric && selectedResult.availableForce < pieceWeight * 5) {
-    smcWarningEl.textContent = "ATENÇÃO: SMC recomenda força entre 5x e 10x o peso da peça para aplicações com robôs colaborativos";
+    smcWarningEl.textContent = "SMC recomenda entre 5x e 10x o peso da peça";
     smcWarningEl.classList.remove("is-hidden");
   } else {
     smcWarningEl.classList.add("is-hidden");
@@ -673,6 +675,10 @@ function handleFormChange(event) {
 
   if (event.target.id === "workpieceShape" || event.target.id === "mountingType") {
     syncGeometryFields();
+
+    if (selectedType === "eletrica" && event.target.id === "mountingType") {
+      selectedGripper = grippers.find((gripper) => gripper.type === "eletrica" && gripper.mounting === mountingTypeEl.value) || null;
+    }
 
     if (selectedGripper && !getCompatibleGrippers(selectedType, workpieceShapeEl.value, mountingTypeEl.value).some((gripper) => gripper.model === selectedGripper.model)) {
       selectedGripper = null;
