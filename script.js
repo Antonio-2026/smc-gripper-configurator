@@ -334,6 +334,16 @@ function ajustarMovimento(forca, movement) {
   return forca;
 }
 
+function ajustarFatorSeguranca(forcaCatalogo, movement, SF_usuario) {
+  const SF_catalogo = movement === "vertical" ? 8 : 4;
+  return forcaCatalogo * (SF_catalogo / SF_usuario);
+}
+
+function getDefaultPressure(size) {
+  if (size === "400x240") return 0.6;
+  return 0.45;
+}
+
 function calculateRequiredForce(values) {
   const weight = values.mass * 9.81;
 
@@ -378,7 +388,12 @@ function calculateForGripper(gripper, values) {
         : data.full + (data.half - data.full) * (1 - values.suctionArea);
     }
 
-    const availableForce = ajustarMovimento(baseForce, values.movement);
+    let availableForce = ajustarMovimento(baseForce, values.movement);
+    availableForce = ajustarFatorSeguranca(
+      availableForce,
+      values.movement,
+      values.safetyFactor,
+    );
     const requiredForce = values.mass * 9.81;
 
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -899,6 +914,9 @@ function handleCardSelection(event) {
   }
   if (isVacuumType() && selectedGripper && !selectedGripper.ejectors.includes(Number(ejectorsEl.value))) {
     ejectorsEl.value = String(selectedGripper.ejectors[0]);
+  }
+  if (selectedGripper?.type === "vacuo") {
+    document.getElementById("pressure").value = getDefaultPressure(selectedGripper.size);
   }
   updateUI();
 }
