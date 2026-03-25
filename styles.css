@@ -43,7 +43,7 @@ h2, h3 { margin-bottom: 0.35rem; }
 .decision-panel { border: 1px solid #d8e4f1; border-radius: 14px; padding: 18px; background: linear-gradient(135deg, #f7fbff 0%, #eef5fb 100%); }
 .decision-label { margin: 0 0 0.4rem; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .technology-grid, .gripper-grid { display: grid; gap: 16px; margin-bottom: 20px; }
-.technology-grid { grid-template-columns: repeat(3, 1fr); }
+.technology-grid { grid-template-columns: repeat(4, 1fr); }
 .gripper-grid { grid-template-columns: 1fr 1fr; }
 .technology-card, .gripper-card {
   border: 1px solid var(--line); background: #f8fafc; border-radius: 12px; padding: 16px; position: relative; text-align: left;
@@ -108,3 +108,6 @@ th { background: #f4f7fb; }
 }
 
 .is-hidden { display: none !important; }
+
+#areaPctField { grid-column: 1 / -1; }
+#areaPctField input[type="range"] { width: 100%; }
