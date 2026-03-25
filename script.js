@@ -25,19 +25,19 @@ const grippers = [
 ];
 
 const ZGS_DATA = {
-  "200x120": {
-    1: { full: 440, half: 190 },
-    2: { full: 440, half: 210 },
+  "400x240": {
+    2: { full: 536, half: 188 },
+    4: { full: 536, half: 188 },
+    6: { full: 536, half: 201 },
   },
   "300x180": {
-    1: { full: 880 },
-    2: { half: 350 },
-    3: { half: 357 },
+    1: { full: 220, half: null },
+    2: { full: 220, half: 87 },
+    3: { full: 220, half: 89 },
   },
-  "400x240": {
-    2: { full: 2144 },
-    4: { half: 752 },
-    6: { half: 808 },
+  "200x120": {
+    1: { full: 110, half: 47 },
+    2: { full: 110, half: 52 },
   },
 };
 
@@ -52,7 +52,7 @@ const defaultsByType = {
   pneumatica: { workpieceShape: "rectangular", parallelMode: "enabled", gripperCount: 1, friction: 0.2, mode: "external", offset: 0, pressure: 0.5 },
   magnetica: { workpieceShape: "flat", parallelMode: "enabled", gripperCount: 1, thickness: 2, material: "Aço", pressure: 0.5 },
   eletrica: { workpieceShape: "rectangular", gripperCount: 1, friction: 0.2, offset: 10, mountingType: "standard", configuredForce: 100 },
-  vacuo: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, suctionArea: 1.0, ejectors: 2 },
+  vacuo: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, suctionArea: 1.0, ejectors: 2, movement: "horizontal" },
 };
 
 const ELECTRIC_FORCE_CURVES = [60, 100, 140];
@@ -93,6 +93,8 @@ const mountingTypeFieldEl = document.getElementById("mountingTypeField");
 const mountingTypeEl = document.getElementById("mountingType");
 const configuredForceFieldEl = document.getElementById("configuredForceField");
 const configuredForceEl = document.getElementById("configuredForce");
+const movementFieldEl = document.getElementById("movementField");
+const movementEl = document.getElementById("movement");
 const electricTechnicalNoteEl = document.getElementById("electricTechnicalNote");
 const smcWarningEl = document.getElementById("smcWarning");
 const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
@@ -165,6 +167,7 @@ function getInputs() {
     configuredForce: Number(configuredForceEl.value),
     ejectors: Number(ejectorsEl.value),
     suctionArea: Number(suctionAreaEl.value),
+    movement: movementEl?.value || "horizontal",
   };
 }
 
@@ -255,6 +258,7 @@ function syncGripperSpecificFields() {
 
   vacuumAreaFieldEl.classList.toggle("is-hidden", !isVacuum);
   ejectorFieldEl.classList.toggle("is-hidden", !isVacuum);
+  movementFieldEl.classList.toggle("is-hidden", !isVacuum);
   frictionFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum);
   modeFieldEl.classList.toggle("is-hidden", isMagnetic || isElectric || isVacuum);
   offsetFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum);
@@ -284,6 +288,7 @@ function syncGripperSpecificFields() {
   configuredForceEl.disabled = !isElectric;
   ejectorsEl.disabled = !isVacuum;
   suctionAreaEl.disabled = !isVacuum;
+  movementEl.disabled = !isVacuum;
   document.getElementById("safetyFactor").disabled = false;
 }
 
@@ -324,9 +329,9 @@ function getReductionFactor(offsetMm) {
   return 0.35;
 }
 
-function interpolateZGS(area, full, half) {
-  if (!full || !half) return full || half;
-  return full + ((half - full) * (area - 1) / (0.5 - 1));
+function ajustarMovimento(forca, movement) {
+  if (movement === "vertical") return forca / 2;
+  return forca;
 }
 
 function calculateRequiredForce(values) {
@@ -363,19 +368,18 @@ function calculateForGripper(gripper, values) {
 
     let baseForce;
 
-    if (values.suctionArea >= 0.99 && data.full) {
+    if (values.suctionArea >= 0.99) {
       baseForce = data.full;
-    } else if (values.suctionArea <= 0.5 && data.half) {
+    } else if (values.suctionArea <= 0.5) {
       baseForce = data.half;
     } else {
-      baseForce = interpolateZGS(values.suctionArea, data.full, data.half);
+      baseForce = data.half == null
+        ? data.full
+        : data.full + (data.half - data.full) * (1 - values.suctionArea);
     }
 
-    const pressureFactor = values.pressure >= 0.6 ? 1 : values.pressure >= 0.5 ? 0.9 : values.pressure >= 0.4 ? 0.8 : 0.7;
-
-    const availableForce = baseForce * pressureFactor;
-
-    const requiredForce = values.mass * 9.81 * values.safetyFactor;
+    const availableForce = ajustarMovimento(baseForce, values.movement);
+    const requiredForce = values.mass * 9.81;
 
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
 
@@ -389,7 +393,7 @@ function calculateForGripper(gripper, values) {
       safe: availableForce >= requiredForce,
       marginPercent,
       effectiveGripperCount: 1,
-      baseAvailableForce: baseForce,
+      baseAvailableForce: availableForce,
       configuredForce: null,
       referencePressure: null,
       forceReductionFactor: null,
@@ -476,8 +480,7 @@ function buildPressureCurve(result, referencePressure) {
     for (let pressure = 0.3; pressure <= 0.700001; pressure += 0.05) {
       const roundedPressure = Number(pressure.toFixed(2));
       pressureSteps.push(roundedPressure);
-      const pressureFactor = roundedPressure >= 0.6 ? 1 : roundedPressure >= 0.5 ? 0.9 : roundedPressure >= 0.4 ? 0.8 : 0.7;
-      forceSteps.push(result.baseAvailableForce * pressureFactor);
+      forceSteps.push(result.baseAvailableForce);
     }
     return { pressureSteps, forceSteps };
   }
@@ -703,6 +706,7 @@ function applyTypeDefaults(type) {
   mountingTypeEl.value = defaults.mountingType ?? mountingTypeEl.value;
   configuredForceEl.value = defaults.configuredForce ?? configuredForceEl.value;
   suctionAreaEl.value = defaults.suctionArea ?? suctionAreaEl.value;
+  movementEl.value = defaults.movement ?? movementEl.value;
   document.getElementById("mass").value = defaults.mass ?? document.getElementById("mass").value;
   ejectorsEl.value = String(defaults.ejectors ?? ejectorsEl.value);
   if (type === TIPOS_GARRA.VACUO) document.getElementById("pressure").setAttribute("min", "0.3");
