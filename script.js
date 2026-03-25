@@ -96,8 +96,6 @@ const mountingTypeFieldEl = document.getElementById("mountingTypeField");
 const mountingTypeEl = document.getElementById("mountingType");
 const configuredForceFieldEl = document.getElementById("configuredForceField");
 const configuredForceEl = document.getElementById("configuredForce");
-const movementFieldEl = document.getElementById("movementField");
-const movementEl = document.getElementById("movement");
 const cupsFieldEl = document.getElementById("cupsField");
 const cupsEl = document.getElementById("cups");
 const cupDiameterFieldEl = document.getElementById("cupDiameterField");
@@ -182,7 +180,7 @@ function getInputs() {
     configuredForce: Number(configuredForceEl.value),
     ejectors: Number(ejectorsEl.value),
     suctionArea: Number(suctionAreaEl.value),
-    movement: movementEl?.value || "horizontal",
+    movement: "horizontal",
     cups: Number(cupsEl?.value || 2),
     cupDiameter: Number(cupDiameterEl?.value || 20),
   };
@@ -276,7 +274,6 @@ function syncGripperSpecificFields() {
 
   vacuumAreaFieldEl.classList.toggle("is-hidden", !isVacuum || isZXPE);
   ejectorFieldEl.classList.toggle("is-hidden", !isVacuum || isZXPE);
-  movementFieldEl.classList.toggle("is-hidden", !isVacuum && !isZXPE);
   cupsFieldEl.classList.toggle("is-hidden", !isZXPE);
   cupDiameterFieldEl.classList.toggle("is-hidden", !isZXPE);
   frictionFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum || isZXPE);
@@ -308,7 +305,6 @@ function syncGripperSpecificFields() {
   configuredForceEl.disabled = !isElectric;
   ejectorsEl.disabled = !isVacuum || isZXPE;
   suctionAreaEl.disabled = !isVacuum || isZXPE;
-  movementEl.disabled = !isVacuum && !isZXPE;
   cupsEl.disabled = !isZXPE;
   cupDiameterEl.disabled = !isZXPE;
   document.getElementById("safetyFactor").disabled = false;
@@ -742,6 +738,23 @@ function updateChart(selectedResult, values) {
     return;
   }
 
+  if (isElectricVacuumType(values.type)) {
+    chartTitleEl.textContent = "Força disponível (constante)";
+    chart.options.scales.x.title.text = "ZXPE5";
+    chart.options.scales.y.title.text = "Força (N)";
+    const labels = ["Força"];
+    const datasets = [
+      { label: "ZXPE5 (N)", data: [selectedResult.availableForce], borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.25)", fill: true, tension: 0, pointRadius: 4 },
+    ];
+    const chartKey = JSON.stringify([labels, datasets]);
+    if (chartKey === lastChartKey) return;
+    chart.data.labels = labels;
+    chart.data.datasets = datasets;
+    chart.update("none");
+    lastChartKey = chartKey;
+    return;
+  }
+
   chartTitleEl.textContent = "Curva Força x Pressão";
   chart.options.scales.x.title.text = "Pressão (MPa)";
   chart.options.scales.y.title.text = "Força (N)";
@@ -777,7 +790,6 @@ function applyTypeDefaults(type) {
   mountingTypeEl.value = defaults.mountingType ?? mountingTypeEl.value;
   configuredForceEl.value = defaults.configuredForce ?? configuredForceEl.value;
   suctionAreaEl.value = defaults.suctionArea ?? suctionAreaEl.value;
-  movementEl.value = defaults.movement ?? movementEl.value;
   cupsEl.value = String(defaults.cups ?? cupsEl.value);
   cupDiameterEl.value = String(defaults.cupDiameter ?? cupDiameterEl.value);
   document.getElementById("mass").value = defaults.mass ?? document.getElementById("mass").value;
@@ -849,14 +861,17 @@ function updateUI(options = {}) {
 
   const hasValidCombination = !selectedGripper || compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model);
   if (!hasValidCombination) {
-    setNoSelectionState("Combinação inválida. Ajuste os parâmetros ou selecione uma garra compatível.");
+    setNoSelectionState("Ajuste os parâmetros ou selecione uma garra compatível.");
     renderCards(allTypeGrippers, compatibleGrippers, null);
     return;
   }
 
   const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
-  const approved = results.filter((result) => result.safe).sort((a, b) => a.excessForce - b.excessForce);
-  const best = approved[0] || null;
+  const validResults = results.filter((result) => result.availableForce > 0);
+  let best = validResults.sort((a, b) => b.availableForce - a.availableForce)[0] || null;
+  if (!best) {
+    best = results.sort((a, b) => b.availableForce - a.availableForce)[0] || null;
+  }
   const electricBest = isElectric ? getElectricBestRecommendation(electricRecommendationPool, values) : null;
 
   if (!selectedGripper && compatibleGrippers.length && !skipAutoSelection) {
@@ -885,7 +900,7 @@ function updateUI(options = {}) {
 
   const selectedResult = results.find((result) => result.model === selectedGripper.model);
   if (!selectedResult) {
-    setNoSelectionState("Combinação inválida. Ajuste os parâmetros ou selecione uma garra compatível.");
+    setNoSelectionState("Ajuste os parâmetros ou selecione uma garra compatível.");
     renderTable(results, best?.model || null);
     return;
   }
@@ -945,7 +960,9 @@ function updateUI(options = {}) {
     smcWarningEl.classList.add("is-hidden");
   }
 
-  updateChart(selectedResult, values);
+  if (selectedResult) {
+    updateChart(selectedResult, values);
+  }
   renderTable(results, best?.model || null);
 }
 
