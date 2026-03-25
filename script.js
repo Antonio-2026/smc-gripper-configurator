@@ -19,18 +19,26 @@ const grippers = [
   },
   { model: "LEHR32 Standard", type: "eletrica", mounting: "standard", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
   { model: "LEHR32 Longitudinal", type: "eletrica", mounting: "longitudinal", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
+  { model: "ZGS 200x120", type: "vacuo", size: "200x120", ejectors: [1, 2], compatible_shapes: ["flat", "rectangular"] },
+  { model: "ZGS 300x180", type: "vacuo", size: "300x180", ejectors: [1, 2, 3], compatible_shapes: ["flat", "rectangular"] },
+  { model: "ZGS 400x240", type: "vacuo", size: "400x240", ejectors: [2, 4, 6], compatible_shapes: ["flat", "rectangular"] },
 ];
 
 const ZGS_DATA = {
-  "200x120": { saving: { 1: { full: 440, half: 190 }, 2: { full: 440, half: 210 } } },
-  "300x180": { saving: { 1: { full: 880 }, 2: { half: 350 }, 3: { half: 357 } } },
-  "400x240": { saving: { 2: { full: 2144 }, 4: { half: 752 }, 6: { half: 808 } } },
-};
-
-const ZGS_EJECTOR_OPTIONS = {
-  "200x120": [1, 2],
-  "300x180": [1, 2, 3],
-  "400x240": [2, 4, 6],
+  "200x120": {
+    1: { full: 440, half: 190 },
+    2: { full: 440, half: 210 },
+  },
+  "300x180": {
+    1: { full: 880 },
+    2: { half: 350 },
+    3: { half: 357 },
+  },
+  "400x240": {
+    2: { full: 2144 },
+    4: { half: 752 },
+    6: { half: 808 },
+  },
 };
 
 const TIPOS_GARRA = {
@@ -39,28 +47,12 @@ const TIPOS_GARRA = {
   VACUO: "vacuo",
 };
 
-Object.entries(ZGS_DATA).forEach(([foamSize, types]) => {
-  Object.entries(types).forEach(([plateType, ejectors]) => {
-    Object.keys(ejectors).forEach((ejectorCount) => {
-      grippers.push({
-        model: `ZGS ${foamSize} - ${ejectorCount} ejetor(es)`,
-        type: "vacuo",
-        fingers: 0,
-        allows_parallel: true,
-        foamSize,
-        plateType,
-        ejectors: Number(ejectorCount),
-        compatible_shapes: ["flat", "rectangular", "square"],
-      });
-    });
-  });
-});
 
 const defaultsByType = {
   pneumatica: { workpieceShape: "rectangular", parallelMode: "enabled", gripperCount: 1, friction: 0.2, mode: "external", offset: 0, pressure: 0.5 },
   magnetica: { workpieceShape: "flat", parallelMode: "enabled", gripperCount: 1, thickness: 2, material: "Aço", pressure: 0.5 },
   eletrica: { workpieceShape: "rectangular", gripperCount: 1, friction: 0.2, offset: 10, mountingType: "standard", configuredForce: 100 },
-  vacuo: { workpieceShape: "flat", pressure: 0.5, foamSize: "300x180", plateType: "saving", ejectors: 2, areaPct: 1, movement: "horizontal", mass: 1.2 },
+  vacuo: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, suctionArea: 1.0, ejectors: 2 },
 };
 
 const ELECTRIC_FORCE_CURVES = [60, 100, 140];
@@ -105,17 +97,11 @@ const electricTechnicalNoteEl = document.getElementById("electricTechnicalNote")
 const smcWarningEl = document.getElementById("smcWarning");
 const geometryCompatibilityMessageEl = document.getElementById("geometryCompatibilityMessage");
 const chartTitleEl = document.getElementById("chartTitle");
-const foamSizeFieldEl = document.getElementById("foamSizeField");
-const plateTypeFieldEl = document.getElementById("plateTypeField");
-const ejectorsFieldEl = document.getElementById("ejectorsField");
-const areaPctFieldEl = document.getElementById("areaPctField");
-const movementFieldEl = document.getElementById("movementField");
-const foamSizeEl = document.getElementById("foamSize");
-const plateTypeEl = document.getElementById("plateType");
+const technologySelectorEl = document.getElementById("technologySelector");
+const vacuumAreaFieldEl = document.getElementById("vacuumAreaField");
+const ejectorFieldEl = document.getElementById("ejectorField");
 const ejectorsEl = document.getElementById("ejectors");
-const areaPctEl = document.getElementById("areaPct");
-const areaPctNumberEl = document.getElementById("areaPctNumber");
-const movementEl = document.getElementById("movement");
+const suctionAreaEl = document.getElementById("suctionArea");
 const safetyFactorFieldEl = document.getElementById("safetyFactor").closest("label");
 const comparisonHeaderRowEl = document.getElementById("comparisonHeaderRow");
 
@@ -177,16 +163,13 @@ function getInputs() {
     material: document.getElementById("material").value.trim(),
     mountingType: mountingTypeEl.value,
     configuredForce: Number(configuredForceEl.value),
-    foamSize: foamSizeEl.value,
-    plateType: plateTypeEl.value,
     ejectors: Number(ejectorsEl.value),
-    areaPct: Number(areaPctEl.value),
-    movement: movementEl.value,
+    suctionArea: Number(suctionAreaEl.value),
   };
 }
 
 function getAllowedShapes(type = selectedType) {
-  if (isVacuumType(type)) return ["flat", "rectangular", "square"];
+  if (isVacuumType(type)) return ["flat", "rectangular"];
   if (isMagneticType(type)) return ["flat", "cylindrical"];
   return ["rectangular", "square", "cylindrical"];
 }
@@ -237,9 +220,6 @@ function isGripperCompatibleWithShape(gripper, type, workpieceShape) {
 
 function getCompatibleGrippers(type, workpieceShape, mountingType) {
   return getTypeGrippers(type).filter((gripper) => {
-    if (type === TIPOS_GARRA.VACUO) {
-      return gripper.foamSize === foamSizeEl.value && gripper.plateType === plateTypeEl.value;
-    }
     const shapeCompatibility = isGripperCompatibleWithShape(gripper, type, workpieceShape);
     if (!shapeCompatibility) return false;
     if (type !== TIPOS_GARRA.ELETRICA) return true;
@@ -260,18 +240,6 @@ function syncGeometryFields() {
   diameterEl.disabled = !showDiameter;
 }
 
-function syncVacuumEjectorOptions() {
-  const foamSize = foamSizeEl.value;
-  const options = ZGS_EJECTOR_OPTIONS[foamSize] || [];
-  const currentValue = Number(ejectorsEl.value);
-  ejectorsEl.innerHTML = options.map((item) => `<option value="${item}">${item}</option>`).join("");
-  if (!options.includes(currentValue)) {
-    [ejectorsEl.value] = options;
-  } else {
-    ejectorsEl.value = String(currentValue);
-  }
-}
-
 function syncComparisonHeader(type) {
   if (type === TIPOS_GARRA.VACUO) {
     comparisonHeaderRowEl.innerHTML = "<th>Modelo</th><th>Força (N)</th><th>Necessária (N)</th><th>Margem</th><th>Status</th>";
@@ -285,6 +253,8 @@ function syncGripperSpecificFields() {
   const isElectric = isElectricType();
   const isVacuum = isVacuumType();
 
+  vacuumAreaFieldEl.classList.toggle("is-hidden", !isVacuum);
+  ejectorFieldEl.classList.toggle("is-hidden", !isVacuum);
   frictionFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum);
   modeFieldEl.classList.toggle("is-hidden", isMagnetic || isElectric || isVacuum);
   offsetFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum);
@@ -297,12 +267,7 @@ function syncGripperSpecificFields() {
   mountingTypeFieldEl.classList.toggle("is-hidden", !isElectric);
   configuredForceFieldEl.classList.toggle("is-hidden", !isElectric);
   electricTechnicalNoteEl.classList.toggle("is-hidden", !isElectric);
-  foamSizeFieldEl.classList.toggle("is-hidden", !isVacuum);
-  plateTypeFieldEl.classList.toggle("is-hidden", !isVacuum);
-  ejectorsFieldEl.classList.toggle("is-hidden", !isVacuum);
-  areaPctFieldEl.classList.toggle("is-hidden", !isVacuum);
-  movementFieldEl.classList.toggle("is-hidden", !isVacuum);
-  safetyFactorFieldEl.classList.toggle("is-hidden", isVacuum);
+  safetyFactorFieldEl.classList.toggle("is-hidden", false);
   workpieceShapeEl.closest("label").classList.toggle("is-hidden", isVacuum);
   rectangularDimensionsEl.classList.toggle("is-hidden", isVacuum || !(workpieceShapeEl.value === "rectangular" || workpieceShapeEl.value === "square"));
   cylindricalDimensionsEl.classList.toggle("is-hidden", isVacuum || workpieceShapeEl.value !== "cylindrical");
@@ -317,13 +282,9 @@ function syncGripperSpecificFields() {
   gripperCountEl.disabled = isVacuum;
   mountingTypeEl.disabled = !isElectric;
   configuredForceEl.disabled = !isElectric;
-  foamSizeEl.disabled = !isVacuum;
-  plateTypeEl.disabled = !isVacuum;
   ejectorsEl.disabled = !isVacuum;
-  areaPctEl.disabled = !isVacuum;
-  areaPctNumberEl.disabled = !isVacuum;
-  movementEl.disabled = !isVacuum;
-  document.getElementById("safetyFactor").disabled = isVacuum;
+  suctionAreaEl.disabled = !isVacuum;
+  document.getElementById("safetyFactor").disabled = false;
 }
 
 function getPerFingerForce(gripper, mode) {
@@ -363,50 +324,16 @@ function getReductionFactor(offsetMm) {
   return 0.35;
 }
 
-function interpolar(areaPct, full, half) {
-  const x1 = 1.0;
-  const y1 = full;
-  const x2 = 0.5;
-  const y2 = half;
-  return y1 + ((y2 - y1) * (areaPct - x1)) / (x2 - x1);
-}
-
-function fatorPressao(pressure) {
-  if (pressure >= 0.6) return 1;
-  if (pressure >= 0.5) return 0.9;
-  if (pressure >= 0.4) return 0.8;
-  return 0.7;
-}
-
-function sugerirEjetores(areaPct) {
-  if (areaPct < 0.4) return 6;
-  if (areaPct < 0.7) return 4;
-  return 2;
-}
-
-function calcularZGS(values) {
-  const data = ZGS_DATA[values.foamSize]?.[values.plateType]?.[values.ejectors];
-  if (!data) return { erro: "Combinação não disponível no catálogo" };
-
-  let baseForce;
-  if (values.areaPct >= 0.99 && data.full) baseForce = data.full;
-  else if (values.areaPct <= 0.5 && data.half) baseForce = data.half;
-  else if (data.full && data.half) baseForce = interpolar(values.areaPct, data.full, data.half);
-  else baseForce = data.full || data.half;
-
-  const correctedForce = baseForce * fatorPressao(values.pressure);
-  const safetyFactor = values.movement === "vertical" ? 8 : 4;
-  const requiredForce = values.mass * 9.81 * safetyFactor;
-  const marginPercent = requiredForce === 0 ? 0 : ((correctedForce - requiredForce) / requiredForce) * 100;
-
-  return { correctedForce, requiredForce, marginPercent, safe: marginPercent > 0, baseForce };
+function interpolateZGS(area, full, half) {
+  if (!full || !half) return full || half;
+  return full + ((half - full) * (area - 1) / (0.5 - 1));
 }
 
 function calculateRequiredForce(values) {
   const weight = values.mass * 9.81;
 
   if (isVacuumType(values.type)) {
-    return weight * (values.movement === "vertical" ? 8 : 4);
+    return weight * values.safetyFactor;
   }
 
   if (isElectricType(values.type)) {
@@ -422,40 +349,50 @@ function calculateRequiredForce(values) {
 
 function calculateForGripper(gripper, values) {
   if (isVacuumGripper(gripper)) {
-    const zgsResult = calcularZGS({ ...values, ejectors: gripper.ejectors, foamSize: gripper.foamSize, plateType: gripper.plateType });
-    if (zgsResult.erro) {
+    const data = ZGS_DATA[gripper.size]?.[values.ejectors];
+
+    if (!data) {
       return {
         model: gripper.model,
-        type: gripper.type,
-        fingers: 0,
         requiredForce: 0,
         availableForce: 0,
-        excessForce: 0,
         safe: false,
         marginPercent: -100,
-        effectiveGripperCount: 1,
-        baseAvailableForce: 0,
-        configuredForce: null,
-        referencePressure: 0.6,
-        forceReductionFactor: null,
       };
     }
+
+    let baseForce;
+
+    if (values.suctionArea >= 0.99 && data.full) {
+      baseForce = data.full;
+    } else if (values.suctionArea <= 0.5 && data.half) {
+      baseForce = data.half;
+    } else {
+      baseForce = interpolateZGS(values.suctionArea, data.full, data.half);
+    }
+
+    const pressureFactor = values.pressure >= 0.6 ? 1 : values.pressure >= 0.5 ? 0.9 : values.pressure >= 0.4 ? 0.8 : 0.7;
+
+    const availableForce = baseForce * pressureFactor;
+
+    const requiredForce = values.mass * 9.81 * values.safetyFactor;
+
+    const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
+
     return {
-      model: `ZGS ${gripper.foamSize} (${gripper.ejectors} ejetor${gripper.ejectors > 1 ? "es" : ""})`,
-      type: gripper.type,
+      model: gripper.model,
+      type: "vacuo",
       fingers: 0,
-      requiredForce: zgsResult.requiredForce,
-      availableForce: zgsResult.correctedForce,
-      excessForce: zgsResult.correctedForce - zgsResult.requiredForce,
-      safe: zgsResult.safe,
-      marginPercent: zgsResult.marginPercent,
+      requiredForce,
+      availableForce,
+      excessForce: availableForce - requiredForce,
+      safe: availableForce >= requiredForce,
+      marginPercent,
       effectiveGripperCount: 1,
-      baseAvailableForce: zgsResult.baseForce,
+      baseAvailableForce: baseForce,
       configuredForce: null,
-      referencePressure: 0.6,
+      referencePressure: null,
       forceReductionFactor: null,
-      ejectors: gripper.ejectors,
-      foamSize: gripper.foamSize,
     };
   }
 
@@ -539,7 +476,8 @@ function buildPressureCurve(result, referencePressure) {
     for (let pressure = 0.3; pressure <= 0.700001; pressure += 0.05) {
       const roundedPressure = Number(pressure.toFixed(2));
       pressureSteps.push(roundedPressure);
-      forceSteps.push(result.baseAvailableForce * fatorPressao(roundedPressure));
+      const pressureFactor = roundedPressure >= 0.6 ? 1 : roundedPressure >= 0.5 ? 0.9 : roundedPressure >= 0.4 ? 0.8 : 0.7;
+      forceSteps.push(result.baseAvailableForce * pressureFactor);
     }
     return { pressureSteps, forceSteps };
   }
@@ -594,6 +532,9 @@ function buildElectricCurves(values) {
 
 function renderTechnologyCards() {
   tipoGarraSelectEl.value = selectedType;
+  Array.from(technologySelectorEl.querySelectorAll(".technology-card")).forEach((card) => {
+    card.classList.toggle("selected", card.dataset.type === selectedType);
+  });
 }
 
 function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
@@ -609,7 +550,7 @@ function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
       let detailLabel = `${gripper.fingers} dedos`;
       if (isMagneticGripper(gripper)) detailLabel = "Magnética";
       if (isElectricGripper(gripper)) detailLabel = gripper.mounting === "standard" ? "Montagem Standard" : "Montagem Longitudinal";
-      if (isVacuumGripper(gripper)) detailLabel = `${gripper.foamSize} • ${gripper.ejectors} ejetor(es)`;
+      if (isVacuumGripper(gripper)) detailLabel = `${gripper.size} • ejetores: ${gripper.ejectors.join(", ")}`;
 
       return `
         <button type="button" class="${classes.join(" ")}" data-model="${gripper.model}" ${isCompatible ? "" : 'disabled aria-disabled="true"'}>
@@ -732,7 +673,7 @@ function updateChart(selectedResult, values) {
   chart.options.scales.y.title.text = "Força (N)";
 
   const curve = buildPressureCurve(selectedResult, selectedResult.referencePressure);
-  const currentPointPressure = selectedResult.referencePressure ? values.pressure : 0.1;
+  const currentPointPressure = isVacuumType(values.type) ? values.pressure : selectedResult.referencePressure ? values.pressure : 0.1;
   const currentPoint = curve.pressureSteps.map((item) => (Math.abs(item - currentPointPressure) < 0.026 ? selectedResult.availableForce : null));
   const datasets = [
     { label: "Curva da garra (N)", data: curve.forceSteps, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
@@ -761,13 +702,8 @@ function applyTypeDefaults(type) {
   document.getElementById("pressure").value = defaults.pressure ?? document.getElementById("pressure").value;
   mountingTypeEl.value = defaults.mountingType ?? mountingTypeEl.value;
   configuredForceEl.value = defaults.configuredForce ?? configuredForceEl.value;
-  foamSizeEl.value = defaults.foamSize ?? foamSizeEl.value;
-  plateTypeEl.value = defaults.plateType ?? plateTypeEl.value;
-  areaPctEl.value = defaults.areaPct ?? areaPctEl.value;
-  areaPctNumberEl.value = defaults.areaPct ?? areaPctNumberEl.value;
-  movementEl.value = defaults.movement ?? movementEl.value;
+  suctionAreaEl.value = defaults.suctionArea ?? suctionAreaEl.value;
   document.getElementById("mass").value = defaults.mass ?? document.getElementById("mass").value;
-  syncVacuumEjectorOptions();
   ejectorsEl.value = String(defaults.ejectors ?? ejectorsEl.value);
   if (type === TIPOS_GARRA.VACUO) document.getElementById("pressure").setAttribute("min", "0.3");
   else document.getElementById("pressure").setAttribute("min", "0.1");
@@ -809,7 +745,7 @@ function updateUI(options = {}) {
     || values.safetyFactor < 1
     || (!isMagnetic && !isVacuum && values.friction <= 0)
     || (isElectric && (values.configuredForce < 60 || values.configuredForce > 140))
-    || (isVacuum && (values.pressure < 0.3 || values.pressure > 0.7 || values.areaPct < 0.1 || values.areaPct > 1));
+    || (isVacuum && (values.pressure < 0.3 || values.pressure > 0.7 || values.suctionArea < 0.1 || values.suctionArea > 1 || values.ejectors < 1));
   if (hasInvalidValues) return;
 
   const allTypeGrippers = getTypeGrippers(values.type);
@@ -824,7 +760,7 @@ function updateUI(options = {}) {
   } else if (!compatibleGrippers.length) {
     compatibilityMessage = shapeRestriction?.message || "Não há modelos compatíveis com esta combinação.";
   }
-  if (isVacuum && selectedGripper && selectedGripper.ejectors !== values.ejectors) {
+  if (isVacuum && selectedGripper && !selectedGripper.ejectors.includes(values.ejectors)) {
     selectedGripper = null;
   }
   geometryCompatibilityMessageEl.textContent = compatibilityMessage;
@@ -843,7 +779,7 @@ function updateUI(options = {}) {
 
   if (!selectedGripper && compatibleGrippers.length && !skipAutoSelection) {
     selectedGripper = isVacuum
-      ? compatibleGrippers.find((gripper) => gripper.ejectors === values.ejectors) || compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null
+      ? compatibleGrippers.find((gripper) => gripper.ejectors.includes(values.ejectors)) || compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null
       : compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null;
   }
 
@@ -874,7 +810,7 @@ function updateUI(options = {}) {
   selectedModelEl.textContent = isElectric
     ? `LEHR32 (${mountingLabel})`
     : isVacuum
-      ? `ZGS ${values.foamSize} (${values.ejectors} ejetor${values.ejectors > 1 ? "es" : ""})`
+      ? `${selectedResult.model} (${values.ejectors} ejetor${values.ejectors > 1 ? "es" : ""})`
       : `${selectedResult.model} (${selectedResult.effectiveGripperCount} garra${selectedResult.effectiveGripperCount > 1 ? "s" : ""})`;
   configuredForceResultEl.textContent = isElectric ? `${values.configuredForce.toFixed(0)} N` : isVacuum ? `${selectedResult.availableForce.toFixed(2)} N` : "N/A";
   requiredForceEl.textContent = `${selectedResult.requiredForce.toFixed(2)} N`;
@@ -889,9 +825,8 @@ function updateUI(options = {}) {
       ? `Recomendação automática: ${electricBest.model} com ${electricBest.configuredForce} N (menor força configurada que atende, excesso de ${electricBest.excessForce.toFixed(2)} N).`
       : "Nenhuma combinação elétrica (60/100/140 N) foi aprovada para os parâmetros atuais.";
   } else if (isVacuum) {
-    const suggested = sugerirEjetores(values.areaPct);
     recommendationEl.textContent = best
-      ? `Melhor opção ZGS: ${best.model}. Sugestão automática: ${suggested} ejetor(es) para área atual.`
+      ? `Melhor opção ZGS: ${best.model}.`
       : "Nenhuma configuração ZGS aprovada para os parâmetros atuais.";
   } else {
     recommendationEl.textContent = best
@@ -901,7 +836,7 @@ function updateUI(options = {}) {
   recommendationEl.classList.toggle("is-safe", Boolean(best || electricBest));
 
   const pieceWeight = values.mass * 9.81;
-  if (isVacuum && values.areaPct < 0.5) {
+  if (isVacuum && values.suctionArea < 0.5) {
     smcWarningEl.textContent = "Área de sucção reduzida — risco de vazamento.";
     smcWarningEl.classList.remove("is-hidden");
   } else if (isVacuum && values.pressure < 0.4) {
@@ -924,23 +859,10 @@ function updateUI(options = {}) {
 function handleFormChange(event) {
   let skipAutoSelection = false;
 
-  if (event.target.id === "foamSize") {
-    syncVacuumEjectorOptions();
-    selectedGripper = null;
-  }
-  if (event.target.id === "ejectors" || event.target.id === "plateType") {
+  if (event.target.id === "ejectors") {
     selectedGripper = null;
   }
 
-  if (event.target.id === "areaPct") {
-    areaPctNumberEl.value = areaPctEl.value;
-  }
-
-  if (event.target.id === "areaPctNumber") {
-    const boundedValue = Math.max(0.1, Math.min(1, Number(areaPctNumberEl.value || 1)));
-    areaPctNumberEl.value = boundedValue.toFixed(2);
-    areaPctEl.value = boundedValue;
-  }
 
   if (event.target.id === "workpieceShape" || event.target.id === "mountingType") {
     syncGeometryFields();
@@ -971,11 +893,8 @@ function handleCardSelection(event) {
   if (isElectricType() && selectedGripper) {
     mountingTypeEl.value = selectedGripper.mounting;
   }
-  if (isVacuumType() && selectedGripper) {
-    foamSizeEl.value = selectedGripper.foamSize;
-    plateTypeEl.value = selectedGripper.plateType;
-    syncVacuumEjectorOptions();
-    ejectorsEl.value = String(selectedGripper.ejectors);
+  if (isVacuumType() && selectedGripper && !selectedGripper.ejectors.includes(Number(ejectorsEl.value))) {
+    ejectorsEl.value = String(selectedGripper.ejectors[0]);
   }
   updateUI();
 }
@@ -990,6 +909,13 @@ function handleTypeSelection(event) {
   updateUI();
 }
 
+function handleTechnologyCardSelection(event) {
+  const trigger = event.target.closest("[data-type]");
+  if (!trigger) return;
+  tipoGarraSelectEl.value = trigger.dataset.type;
+  handleTypeSelection({ target: { value: trigger.dataset.type } });
+}
+
 function init() {
   applyTypeDefaults(selectedType);
   renderTechnologyCards();
@@ -997,16 +923,11 @@ function init() {
   syncShapeOptions();
   syncGeometryFields();
   syncGripperSpecificFields();
-  syncVacuumEjectorOptions();
   tipoGarraSelectEl.addEventListener("change", handleTypeSelection);
+  technologySelectorEl.addEventListener("click", handleTechnologyCardSelection);
   gripperCardsEl.addEventListener("click", handleCardSelection);
   form.addEventListener("input", updateUI);
   form.addEventListener("change", handleFormChange);
-  areaPctEl.addEventListener("input", () => { areaPctNumberEl.value = areaPctEl.value; });
-  areaPctNumberEl.addEventListener("input", () => {
-    const boundedValue = Math.max(0.1, Math.min(1, Number(areaPctNumberEl.value || 1)));
-    areaPctEl.value = boundedValue;
-  });
   updateUI();
 }
 
