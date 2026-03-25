@@ -39,6 +39,7 @@
             <button type="button" class="technology-card" data-type="eletrica">Elétrica</button>
             <button type="button" class="technology-card" data-type="pneumatica">Pneumática</button>
             <button type="button" class="technology-card" data-type="vacuo">Vácuo (ZGS)</button>
+            <button type="button" class="technology-card" data-type="vacuo_eletrico">Vácuo Elétrico (ZXPE5)</button>
           </div>
           <label>
             Selecione a tecnologia
@@ -46,6 +47,7 @@
               <option value="eletrica">Elétrica</option>
               <option value="pneumatica">Pneumática</option>
               <option value="vacuo">Vácuo (ZGS)</option>
+              <option value="vacuo_eletrico">Vácuo Elétrico (ZXPE5)</option>
             </select>
           </label>
         </div>
@@ -106,6 +108,22 @@
               <select id="movement">
                 <option value="horizontal">Horizontal</option>
                 <option value="vertical">Vertical</option>
+              </select>
+            </label>
+            <label id="cupsField" class="is-hidden">
+              Nº de ventosas
+              <select id="cups">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+            <label id="cupDiameterField" class="is-hidden">
+              Diâmetro da ventosa (mm)
+              <select id="cupDiameter">
+                <option value="8">Ø8</option>
+                <option value="20">Ø20</option>
+                <option value="32">Ø32</option>
               </select>
             </label>
 
