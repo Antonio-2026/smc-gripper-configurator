@@ -859,11 +859,17 @@ function updateUI(options = {}) {
   }
   geometryCompatibilityMessageEl.textContent = compatibilityMessage;
 
-  const hasValidCombination = !selectedGripper || compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model);
+  const hasValidCombination =
+    !selectedGripper ||
+    compatibleGrippers.some((gripper) => gripper.model === selectedGripper.model);
+
   if (!hasValidCombination) {
-    setNoSelectionState("Ajuste os parâmetros ou selecione uma garra compatível.");
-    renderCards(allTypeGrippers, compatibleGrippers, null);
-    return;
+    // 🔥 NÃO travar o sistema
+    selectedGripper = null;
+
+    // apenas mensagem visual (sem bloquear cálculo)
+    geometryCompatibilityMessageEl.textContent =
+      "Combinação inválida. Ajuste os parâmetros ou selecione uma garra compatível.";
   }
 
   const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
