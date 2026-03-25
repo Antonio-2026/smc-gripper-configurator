@@ -33,6 +33,12 @@ const ZGS_EJECTOR_OPTIONS = {
   "400x240": [2, 4, 6],
 };
 
+const TIPOS_GARRA = {
+  ELETRICA: "eletrica",
+  PNEUMATICA: "pneumatica",
+  VACUO: "vacuo",
+};
+
 Object.entries(ZGS_DATA).forEach(([foamSize, types]) => {
   Object.entries(types).forEach(([plateType, ejectors]) => {
     Object.keys(ejectors).forEach((ejectorCount) => {
@@ -59,12 +65,12 @@ const defaultsByType = {
 
 const ELECTRIC_FORCE_CURVES = [60, 100, 140];
 
-let selectedType = "vacuo";
+let selectedType = TIPOS_GARRA.VACUO;
 let selectedGripper = null;
 let lastChartKey = "";
 
 const form = document.getElementById("configForm");
-const technologySelectorEl = document.getElementById("technologySelector");
+const tipoGarraSelectEl = document.getElementById("tipoGarraSelect");
 const gripperCardsEl = document.getElementById("gripperCards");
 const selectedModelEl = document.getElementById("selectedModel");
 const requiredForceEl = document.getElementById("requiredForce");
@@ -133,11 +139,11 @@ function isMagneticType(type = selectedType) {
 }
 
 function isElectricType(type = selectedType) {
-  return type === "eletrica";
+  return type === TIPOS_GARRA.ELETRICA;
 }
 
 function isVacuumType(type = selectedType) {
-  return type === "vacuo";
+  return type === TIPOS_GARRA.VACUO;
 }
 
 function isMagneticGripper(gripper) {
@@ -145,11 +151,11 @@ function isMagneticGripper(gripper) {
 }
 
 function isElectricGripper(gripper) {
-  return gripper?.type === "eletrica";
+  return gripper?.type === TIPOS_GARRA.ELETRICA;
 }
 
 function isVacuumGripper(gripper) {
-  return gripper?.type === "vacuo";
+  return gripper?.type === TIPOS_GARRA.VACUO;
 }
 
 function getInputs() {
@@ -200,7 +206,7 @@ function syncShapeOptions() {
 }
 
 function getShapeRestriction(type, workpieceShape) {
-  if (type !== "pneumatica") return null;
+  if (type !== TIPOS_GARRA.PNEUMATICA) return null;
 
   if (workpieceShape === "cylindrical") {
     return {
@@ -231,12 +237,12 @@ function isGripperCompatibleWithShape(gripper, type, workpieceShape) {
 
 function getCompatibleGrippers(type, workpieceShape, mountingType) {
   return getTypeGrippers(type).filter((gripper) => {
-    if (type === "vacuo") {
+    if (type === TIPOS_GARRA.VACUO) {
       return gripper.foamSize === foamSizeEl.value && gripper.plateType === plateTypeEl.value;
     }
     const shapeCompatibility = isGripperCompatibleWithShape(gripper, type, workpieceShape);
     if (!shapeCompatibility) return false;
-    if (type !== "eletrica") return true;
+    if (type !== TIPOS_GARRA.ELETRICA) return true;
     return gripper.mounting === mountingType;
   });
 }
@@ -267,7 +273,7 @@ function syncVacuumEjectorOptions() {
 }
 
 function syncComparisonHeader(type) {
-  if (type === "vacuo") {
+  if (type === TIPOS_GARRA.VACUO) {
     comparisonHeaderRowEl.innerHTML = "<th>Modelo</th><th>Força (N)</th><th>Necessária (N)</th><th>Margem</th><th>Status</th>";
     return;
   }
@@ -529,7 +535,7 @@ function buildPressureCurve(result, referencePressure) {
   const pressureSteps = [];
   const forceSteps = [];
 
-  if (result.type === "vacuo") {
+  if (result.type === TIPOS_GARRA.VACUO) {
     for (let pressure = 0.3; pressure <= 0.700001; pressure += 0.05) {
       const roundedPressure = Number(pressure.toFixed(2));
       pressureSteps.push(roundedPressure);
@@ -587,9 +593,7 @@ function buildElectricCurves(values) {
 }
 
 function renderTechnologyCards() {
-  Array.from(technologySelectorEl.querySelectorAll("[data-type]")).forEach((button) => {
-    button.classList.toggle("selected", button.dataset.type === selectedType);
-  });
+  tipoGarraSelectEl.value = selectedType;
 }
 
 function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
@@ -625,7 +629,7 @@ function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
 }
 
 function renderTable(results, bestModel) {
-  if (selectedType === "vacuo") {
+  if (selectedType === TIPOS_GARRA.VACUO) {
     comparisonTableBodyEl.innerHTML = results
       .map(
         (result) => `<tr class="${result.model === bestModel ? "best-row" : ""}">
@@ -652,7 +656,7 @@ function renderTable(results, bestModel) {
       (result) => `
         <tr class="${result.model === bestModel ? "best-row" : ""}">
           <td>${result.model}</td>
-          <td>${result.type === "pneumatica" ? result.fingers : "—"}</td>
+          <td>${result.type === TIPOS_GARRA.PNEUMATICA ? result.fingers : "—"}</td>
           <td>${result.availableForce.toFixed(2)}</td>
           <td>${result.requiredForce.toFixed(2)}</td>
           <td>${result.excessForce.toFixed(2)}</td>
@@ -702,7 +706,7 @@ function setNoSelectionState(message = "Selecione uma garra para iniciar.") {
   recommendationEl.textContent = message;
   recommendationEl.classList.remove("is-safe");
   smcWarningEl.classList.add("is-hidden");
-  const colspan = selectedType === "vacuo" ? 5 : 7;
+  const colspan = selectedType === TIPOS_GARRA.VACUO ? 5 : 7;
   comparisonTableBodyEl.innerHTML = `<tr><td colspan="${colspan}">${message}</td></tr>`;
 }
 
@@ -765,7 +769,7 @@ function applyTypeDefaults(type) {
   document.getElementById("mass").value = defaults.mass ?? document.getElementById("mass").value;
   syncVacuumEjectorOptions();
   ejectorsEl.value = String(defaults.ejectors ?? ejectorsEl.value);
-  if (type === "vacuo") document.getElementById("pressure").setAttribute("min", "0.3");
+  if (type === TIPOS_GARRA.VACUO) document.getElementById("pressure").setAttribute("min", "0.3");
   else document.getElementById("pressure").setAttribute("min", "0.1");
   geometryCompatibilityMessageEl.textContent = "";
   selectedGripper = null;
@@ -941,8 +945,8 @@ function handleFormChange(event) {
   if (event.target.id === "workpieceShape" || event.target.id === "mountingType") {
     syncGeometryFields();
 
-    if (selectedType === "eletrica" && event.target.id === "mountingType") {
-      selectedGripper = grippers.find((gripper) => gripper.type === "eletrica" && gripper.mounting === mountingTypeEl.value) || null;
+    if (selectedType === TIPOS_GARRA.ELETRICA && event.target.id === "mountingType") {
+      selectedGripper = grippers.find((gripper) => gripper.type === TIPOS_GARRA.ELETRICA && gripper.mounting === mountingTypeEl.value) || null;
     }
 
     if (selectedGripper && !getCompatibleGrippers(selectedType, workpieceShapeEl.value, mountingTypeEl.value).some((gripper) => gripper.model === selectedGripper.model)) {
@@ -977,10 +981,10 @@ function handleCardSelection(event) {
 }
 
 function handleTypeSelection(event) {
-  const trigger = event.target.closest("[data-type]");
-  if (!trigger || trigger.dataset.type === selectedType) return;
+  const nextType = event.target.value;
+  if (!nextType || nextType === selectedType) return;
 
-  applyTypeDefaults(trigger.dataset.type);
+  applyTypeDefaults(nextType);
   syncShapeOptions();
   syncGeometryFields();
   updateUI();
@@ -994,7 +998,7 @@ function init() {
   syncGeometryFields();
   syncGripperSpecificFields();
   syncVacuumEjectorOptions();
-  technologySelectorEl.addEventListener("click", handleTypeSelection);
+  tipoGarraSelectEl.addEventListener("change", handleTypeSelection);
   gripperCardsEl.addEventListener("click", handleCardSelection);
   form.addEventListener("input", updateUI);
   form.addEventListener("change", handleFormChange);
