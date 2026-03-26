@@ -139,6 +139,13 @@
               Pressão de trabalho (MPa)
               <input id="pressure" type="number" min="0.1" max="0.7" step="0.01" value="0.5" required />
             </label>
+            <label id="vacuumPressureField" class="is-hidden">
+              Máxima pressão de vácuo (kPa)
+              <input id="vacuumPressure" type="text" value="-74" readonly />
+            </label>
+            <p id="vacuumNote" class="vacuum-note is-hidden">
+              Valores baseados em condições padrão de medição da SMC, com a bomba operando continuamente. Podem variar conforme pressão atmosférica, altitude e método de medição.
+            </p>
             <label id="gripperCountField">
               Número de garras
               <input id="gripperCount" type="number" min="1" step="1" value="1" required />
