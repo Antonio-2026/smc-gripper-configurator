@@ -3,18 +3,11 @@ const grippers = [
   { model: "RMHF2", type: "pneumatica", fingers: 2, allows_parallel: true, external_per_finger: 90, internal_per_finger: 90, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square"] },
   { model: "RMHS3", type: "pneumatica", fingers: 3, allows_parallel: false, external_per_finger: 118, internal_per_finger: 130, reference_pressure: 0.5, compatible_shapes: ["rectangular", "square", "cylindrical"] },
   {
-    model: "MHM-25D-X7400A",
+    model: "MHM-X7400A",
     type: "magnetica",
     fingers: 0,
     allows_parallel: true,
-    grip_force: {
-      by_thickness: [
-        { thickness_mm: 2, force_N: 160 },
-        { thickness_mm: 6, force_N: 200 },
-      ],
-    },
-    pressure: { min: 0.2, max: 0.6 },
-    mass_kg: 0.59,
+    maxForce: 200,
     compatible_shapes: ["flat", "cylindrical"],
   },
   { model: "LEHR32 Standard", type: "eletrica", mounting: "standard", fingers: 0, allows_parallel: true, compatible_shapes: ["rectangular", "square", "cylindrical"] },
@@ -45,6 +38,7 @@ const ZGS_DATA = {
 const TIPOS_GARRA = {
   ELETRICA: "eletrica",
   PNEUMATICA: "pneumatica",
+  MAGNETICA: "magnetica",
   VACUO: "vacuo",
   VACUO_ELETRICO: "vacuo_eletrico",
 };
@@ -52,7 +46,7 @@ const TIPOS_GARRA = {
 
 const defaultsByType = {
   pneumatica: { workpieceShape: "rectangular", parallelMode: "enabled", gripperCount: 1, friction: 0.2, mode: "external", offset: 0, pressure: 0.5 },
-  magnetica: { workpieceShape: "flat", parallelMode: "enabled", gripperCount: 1, thickness: 2, material: "Aço", pressure: 0.5 },
+  magnetica: { workpieceShape: "flat", parallelMode: "enabled", gripperCount: 1, magnetCount: 1, thickness: 6, material: "steel", pressure: 0.5 },
   eletrica: { workpieceShape: "rectangular", gripperCount: 1, friction: 0.2, offset: 10, mountingType: "standard", configuredForce: 100 },
   vacuo: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, suctionArea: 1.0, ejectors: 2, movement: "horizontal" },
   vacuo_eletrico: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, cups: 2, cupDiameter: 20, movement: "horizontal" },
@@ -79,6 +73,8 @@ const parallelModeEl = document.getElementById("parallelMode");
 const parallelModeFieldEl = document.getElementById("parallelModeField");
 const gripperCountEl = document.getElementById("gripperCount");
 const gripperCountFieldEl = document.getElementById("gripperCountField");
+const magnetCountFieldEl = document.getElementById("magnetCountField");
+const magnetCountEl = document.getElementById("magnetCount");
 const pressureFieldEl = document.getElementById("pressureField");
 const vacuumPressureFieldEl = document.getElementById("vacuumPressureField");
 const vacuumNoteEl = document.getElementById("vacuumNote");
@@ -94,6 +90,7 @@ const offsetFieldEl = document.getElementById("offsetField");
 const thicknessFieldEl = document.getElementById("thicknessField");
 const materialFieldEl = document.getElementById("materialField");
 const materialWarningEl = document.getElementById("materialWarning");
+const magnetNoteEl = document.getElementById("magnetNote");
 const mountingTypeFieldEl = document.getElementById("mountingTypeField");
 const mountingTypeEl = document.getElementById("mountingType");
 const configuredForceFieldEl = document.getElementById("configuredForceField");
@@ -133,7 +130,7 @@ const chart = new Chart(document.getElementById("forceChart"), {
 });
 
 function isMagneticType(type = selectedType) {
-  return type === "magnetica";
+  return type === TIPOS_GARRA.MAGNETICA;
 }
 
 function isElectricType(type = selectedType) {
@@ -153,7 +150,7 @@ function isElectricVacuumType(type = selectedType) {
 }
 
 function isMagneticGripper(gripper) {
-  return gripper?.type === "magnetica";
+  return gripper?.type === TIPOS_GARRA.MAGNETICA;
 }
 
 function isElectricGripper(gripper) {
@@ -183,8 +180,9 @@ function getInputs() {
     offset: Number(document.getElementById("offset").value),
     parallelMode: parallelModeEl.value,
     gripperCount: Number(gripperCountEl.value),
+    magnetCount: Number(magnetCountEl.value),
     thickness: Number(document.getElementById("thickness").value),
-    material: document.getElementById("material").value.trim(),
+    material: document.getElementById("material").value,
     mountingType: mountingTypeEl.value,
     configuredForce: Number(configuredForceEl.value),
     ejectors: Number(ejectorsEl.value),
@@ -278,7 +276,7 @@ function syncComparisonHeader(type) {
 }
 
 function syncGripperSpecificFields() {
-  const isMagnetic = isMagneticType();
+  const isMagnetic = selectedType === TIPOS_GARRA.MAGNETICA;
   const isElectric = isElectricType();
   const isVacuum = isVacuumType();
   const isVacuumElectric = isVacuumElectricType();
@@ -300,12 +298,14 @@ function syncGripperSpecificFields() {
   offsetFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum || isVacuumElectric);
   parallelModeFieldEl.classList.toggle("is-hidden", isMagnetic || isElectric || isVacuum || isVacuumElectric);
   thicknessFieldEl.classList.toggle("is-hidden", !isMagnetic);
+  magnetCountFieldEl.classList.toggle("is-hidden", !isMagnetic);
   materialFieldEl.classList.toggle("is-hidden", !isMagnetic);
+  magnetNoteEl.classList.toggle("is-hidden", !isMagnetic);
   materialWarningEl.classList.toggle("is-hidden", !isMagnetic);
-  pressureFieldEl.classList.toggle("is-hidden", isElectric || isVacuumElectric);
+  pressureFieldEl.classList.toggle("is-hidden", isMagnetic || isElectric || isVacuumElectric);
   vacuumPressureFieldEl.classList.toggle("is-hidden", !isVacuumElectric);
   vacuumNoteEl.classList.toggle("is-hidden", !isVacuumElectric);
-  gripperCountFieldEl.classList.toggle("is-hidden", isVacuum || isVacuumElectric);
+  gripperCountFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum || isVacuumElectric);
   mountingTypeFieldEl.classList.toggle("is-hidden", !isElectric);
   configuredForceFieldEl.classList.toggle("is-hidden", !isElectric);
   electricTechnicalNoteEl.classList.toggle("is-hidden", !isElectric);
@@ -319,9 +319,10 @@ function syncGripperSpecificFields() {
   document.getElementById("offset").disabled = isMagnetic || isVacuum || isVacuumElectric;
   parallelModeEl.disabled = isMagnetic || isElectric || isVacuum || isVacuumElectric;
   document.getElementById("thickness").disabled = !isMagnetic;
+  magnetCountEl.disabled = !isMagnetic;
   document.getElementById("material").disabled = !isMagnetic;
-  document.getElementById("pressure").disabled = isElectric;
-  gripperCountEl.disabled = isVacuum || isVacuumElectric;
+  document.getElementById("pressure").disabled = isMagnetic || isElectric;
+  gripperCountEl.disabled = isMagnetic || isVacuum || isVacuumElectric;
   mountingTypeEl.disabled = !isElectric;
   configuredForceEl.disabled = !isElectric;
   movementEl.disabled = !isVacuum;
@@ -423,6 +424,42 @@ function calculateRequiredForce(values) {
 }
 
 function calculateForGripper(gripper, values) {
+  if (gripper.type === TIPOS_GARRA.MAGNETICA) {
+    const t = values.thickness;
+    const count = Math.max(1, values.magnetCount);
+
+    let baseForce;
+    if (t <= 2) {
+      baseForce = 160;
+    } else if (t >= 6) {
+      baseForce = 200;
+    } else {
+      baseForce = 160 + ((t - 2) / (6 - 2)) * (200 - 160);
+    }
+
+    let materialFactor = 1;
+    if (values.material === "low") materialFactor = 0.6;
+
+    const availableForce = baseForce * materialFactor * count;
+    const requiredForce = values.mass * 9.81 * values.safetyFactor;
+    const marginPercent = requiredForce === 0 ? 0 : ((availableForce - requiredForce) / requiredForce) * 100;
+
+    return {
+      model: `${gripper.model} (${count}x)`,
+      type: TIPOS_GARRA.MAGNETICA,
+      requiredForce,
+      availableForce,
+      excessForce: availableForce - requiredForce,
+      safe: availableForce >= requiredForce,
+      marginPercent,
+      effectiveGripperCount: count,
+      baseAvailableForce: baseForce * materialFactor,
+      configuredForce: null,
+      referencePressure: null,
+      forceReductionFactor: null,
+    };
+  }
+
   if (gripper.type === TIPOS_GARRA.VACUO_ELETRICO) {
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
     const vacuum = 74000;
@@ -499,28 +536,6 @@ function calculateForGripper(gripper, values) {
   }
 
   const requiredForce = calculateRequiredForce(values);
-
-  if (isMagneticGripper(gripper)) {
-    const baseAvailableForce = interpolateForceByThickness(gripper.grip_force.by_thickness, values.thickness);
-    const availableForce = baseAvailableForce * Math.max(1, values.gripperCount);
-    const marginPercent = requiredForce === 0 ? 0 : ((availableForce - requiredForce) / requiredForce) * 100;
-
-    return {
-      model: gripper.model,
-      type: gripper.type,
-      fingers: gripper.fingers,
-      requiredForce,
-      availableForce,
-      excessForce: availableForce - requiredForce,
-      safe: availableForce >= requiredForce,
-      marginPercent,
-      effectiveGripperCount: Math.max(1, values.gripperCount),
-      baseAvailableForce,
-      configuredForce: null,
-      referencePressure: null,
-      forceReductionFactor: null,
-    };
-  }
 
   if (isElectricGripper(gripper)) {
     const reductionFactor = getReductionFactor(values.offset);
@@ -754,6 +769,30 @@ function setNoSelectionState(message = "Selecione uma garra para iniciar.") {
 }
 
 function updateChart(calculation, values) {
+  if (selectedGripper?.type === TIPOS_GARRA.MAGNETICA) {
+    chartTitleEl.textContent = "Curva Força x Espessura";
+    chart.options.scales.x.title.text = "Espessura (mm)";
+    chart.options.scales.y.title.text = "Força (N)";
+
+    const thicknesses = [1, 2, 3, 4, 5, 6];
+    const forces = thicknesses.map((t) => {
+      if (t <= 2) return 160;
+      if (t >= 6) return 200;
+      return 160 + ((t - 2) / 4) * 40;
+    });
+    const datasets = [
+      { label: "Força por garra (N)", data: forces, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
+    ];
+    const chartKey = JSON.stringify([thicknesses, datasets]);
+    if (chartKey === lastChartKey) return;
+
+    chart.data.labels = thicknesses;
+    chart.data.datasets = datasets;
+    chart.update("none");
+    lastChartKey = chartKey;
+    return;
+  }
+
   if (isElectricType(values.type)) {
     chartTitleEl.textContent = "Curva Força x Distância";
     chart.options.scales.x.title.text = "Distância L (mm)";
@@ -834,6 +873,7 @@ function applyTypeDefaults(type) {
   workpieceShapeEl.value = defaults.workpieceShape;
   parallelModeEl.value = defaults.parallelMode ?? parallelModeEl.value;
   gripperCountEl.value = defaults.gripperCount;
+  magnetCountEl.value = defaults.magnetCount ?? magnetCountEl.value;
   document.getElementById("friction").value = defaults.friction ?? document.getElementById("friction").value;
   document.getElementById("mode").value = defaults.mode ?? document.getElementById("mode").value;
   document.getElementById("offset").value = defaults.offset ?? document.getElementById("offset").value;
@@ -887,6 +927,7 @@ function updateUI(options = {}) {
   const hasInvalidValues = values.mass < 0
     || values.thickness <= 0
     || values.gripperCount <= 0
+    || values.magnetCount <= 0
     || values.safetyFactor < 1
     || (!isMagnetic && !isVacuumLike && values.friction <= 0)
     || (isElectric && (values.configuredForce < 60 || values.configuredForce > 140))
@@ -985,7 +1026,9 @@ function updateUI(options = {}) {
       ? `${calculation.model} (${values.ejectors} ejetor${values.ejectors > 1 ? "es" : ""})`
       : isVacuumElectric
         ? calculation.model
-      : `${calculation.model} (${calculation.effectiveGripperCount} garra${calculation.effectiveGripperCount > 1 ? "s" : ""})`;
+        : isMagnetic
+          ? calculation.model
+          : `${calculation.model} (${calculation.effectiveGripperCount} garra${calculation.effectiveGripperCount > 1 ? "s" : ""})`;
   configuredForceResultEl.textContent = isElectric ? `${values.configuredForce.toFixed(0)} N` : isVacuum ? `${calculation.availableForce.toFixed(2)} N` : "N/A";
   requiredForceEl.textContent = `${calculation.requiredForce.toFixed(2)} N`;
   availableForceEl.textContent = `${calculation.availableForce.toFixed(2)} N`;
