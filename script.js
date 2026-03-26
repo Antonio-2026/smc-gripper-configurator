@@ -193,9 +193,11 @@ function getInputs() {
 }
 
 function getAllowedShapes(type = selectedType) {
-  if (type === TIPOS_GARRA.VACUO || type === TIPOS_GARRA.VACUO_ELETRICO) return ["flat", "rectangular"];
+  if (type === TIPOS_GARRA.VACUO || type === TIPOS_GARRA.VACUO_ELETRICO) {
+    return ["flat", "rectangular"];
+  }
   if (isMagneticType(type)) return ["flat", "cylindrical"];
-  return ["rectangular", "square", "cylindrical"];
+  return ["cylindrical", "rectangular", "flat"];
 }
 
 function syncShapeOptions() {
@@ -726,7 +728,7 @@ function setNoSelectionState(message = "Selecione uma garra para iniciar.") {
   comparisonTableBodyEl.innerHTML = `<tr><td colspan="${colspan}">${message}</td></tr>`;
 }
 
-function updateChart(selectedResult, values) {
+function updateChart(calculation, values) {
   if (isElectricType(values.type)) {
     chartTitleEl.textContent = "Curva Força x Distância";
     chart.options.scales.x.title.text = "Distância L (mm)";
@@ -743,13 +745,14 @@ function updateChart(selectedResult, values) {
     return;
   }
 
-  if (isElectricVacuumType(values.type)) {
+  if (selectedGripper?.type === TIPOS_GARRA.VACUO_ELETRICO) {
     chartTitleEl.textContent = "Força disponível (constante)";
-    chart.options.scales.x.title.text = "ZXPE5";
+    chart.options.scales.x.title.text = "Condição";
     chart.options.scales.y.title.text = "Força (N)";
-    const labels = ["Força"];
+    const labels = ["P1", "P2", "P3", "P4", "P5", "P6"];
+    const baseForce = calculation.availableForce;
     const datasets = [
-      { label: "ZXPE5 (N)", data: [selectedResult.availableForce], borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.25)", fill: true, tension: 0, pointRadius: 4 },
+      { label: "ZXPE5 (N)", data: [baseForce, baseForce, baseForce, baseForce, baseForce, baseForce], borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.25)", fill: true, tension: 0, pointRadius: 2 },
     ];
     const chartKey = JSON.stringify([labels, datasets]);
     if (chartKey === lastChartKey) return;
@@ -764,9 +767,9 @@ function updateChart(selectedResult, values) {
   chart.options.scales.x.title.text = "Pressão (MPa)";
   chart.options.scales.y.title.text = "Força (N)";
 
-  const curve = buildPressureCurve(selectedResult, selectedResult.referencePressure);
-  const currentPointPressure = isVacuumType(values.type) ? values.pressure : selectedResult.referencePressure ? values.pressure : 0.1;
-  const currentPoint = curve.pressureSteps.map((item) => (Math.abs(item - currentPointPressure) < 0.026 ? selectedResult.availableForce : null));
+  const curve = buildPressureCurve(calculation, calculation.referencePressure);
+  const currentPointPressure = isVacuumType(values.type) ? values.pressure : calculation.referencePressure ? values.pressure : 0.1;
+  const currentPoint = curve.pressureSteps.map((item) => (Math.abs(item - currentPointPressure) < 0.026 ? calculation.availableForce : null));
   const datasets = [
     { label: "Curva da garra (N)", data: curve.forceSteps, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
     { label: "Ponto atual", data: currentPoint, borderColor: "#f59e0b", backgroundColor: "#f59e0b", showLine: false, pointRadius: 6 },
@@ -888,7 +891,11 @@ function updateUI(options = {}) {
   }
   const electricBest = isElectric ? getElectricBestRecommendation(electricRecommendationPool, values) : null;
 
-  if (!selectedGripper && compatibleGrippers.length && !skipAutoSelection) {
+  if (
+    (!selectedGripper || selectedGripper.type === TIPOS_GARRA.VACUO_ELETRICO)
+    && compatibleGrippers.length
+    && !skipAutoSelection
+  ) {
     selectedGripper = isVacuum
       ? compatibleGrippers.find((gripper) => gripper.ejectors.includes(values.ejectors)) || compatibleGrippers.find((gripper) => gripper.model === (best?.model || compatibleGrippers[0].model)) || null
       : isVacuumElectric
@@ -912,8 +919,19 @@ function updateUI(options = {}) {
     return;
   }
 
-  const selectedResult = results.find((result) => result.model === selectedGripper.model);
-  if (!selectedResult) {
+  let calculation = calculateForGripper(selectedGripper, values);
+  if (!calculation || calculation.availableForce === 0) {
+    const fallback = results.sort((a, b) => b.availableForce - a.availableForce)[0];
+    if (fallback) {
+      calculation = fallback;
+      selectedGripper = {
+        model: fallback.model,
+        type: fallback.type,
+      };
+    }
+  }
+
+  if (!calculation) {
     setNoSelectionState("Ajuste os parâmetros ou selecione uma garra compatível.");
     renderTable(results, best?.model || null);
     return;
@@ -923,17 +941,17 @@ function updateUI(options = {}) {
   selectedModelEl.textContent = isElectric
     ? `LEHR32 (${mountingLabel})`
     : isVacuum
-      ? `${selectedResult.model} (${values.ejectors} ejetor${values.ejectors > 1 ? "es" : ""})`
+      ? `${calculation.model} (${values.ejectors} ejetor${values.ejectors > 1 ? "es" : ""})`
       : isVacuumElectric
-        ? selectedResult.model
-      : `${selectedResult.model} (${selectedResult.effectiveGripperCount} garra${selectedResult.effectiveGripperCount > 1 ? "s" : ""})`;
-  configuredForceResultEl.textContent = isElectric ? `${values.configuredForce.toFixed(0)} N` : isVacuum ? `${selectedResult.availableForce.toFixed(2)} N` : "N/A";
-  requiredForceEl.textContent = `${selectedResult.requiredForce.toFixed(2)} N`;
-  availableForceEl.textContent = `${selectedResult.availableForce.toFixed(2)} N`;
-  safetyMarginEl.textContent = `${selectedResult.marginPercent.toFixed(1)}%`;
-  safetyMarginEl.className = `metric-value ${getSafetyMarginClass(selectedResult.marginPercent)}`;
-  resultTagEl.textContent = selectedResult.safe ? "APROVADO" : "NÃO APROVADO";
-  resultTagEl.className = `validation ${selectedResult.safe ? "safe" : "not-safe"}`;
+        ? calculation.model
+      : `${calculation.model} (${calculation.effectiveGripperCount} garra${calculation.effectiveGripperCount > 1 ? "s" : ""})`;
+  configuredForceResultEl.textContent = isElectric ? `${values.configuredForce.toFixed(0)} N` : isVacuum ? `${calculation.availableForce.toFixed(2)} N` : "N/A";
+  requiredForceEl.textContent = `${calculation.requiredForce.toFixed(2)} N`;
+  availableForceEl.textContent = `${calculation.availableForce.toFixed(2)} N`;
+  safetyMarginEl.textContent = `${calculation.marginPercent.toFixed(1)}%`;
+  safetyMarginEl.className = `metric-value ${getSafetyMarginClass(calculation.marginPercent)}`;
+  resultTagEl.textContent = calculation.safe ? "APROVADO" : "NÃO APROVADO";
+  resultTagEl.className = `validation ${calculation.safe ? "safe" : "not-safe"}`;
 
   if (isElectric) {
     recommendationEl.textContent = electricBest
@@ -961,10 +979,10 @@ function updateUI(options = {}) {
   } else if (isVacuum && values.pressure < 0.4) {
     smcWarningEl.textContent = "Pressão baixa — desempenho comprometido.";
     smcWarningEl.classList.remove("is-hidden");
-  } else if (isVacuum && selectedResult.marginPercent < 0) {
+  } else if (isVacuum && calculation.marginPercent < 0) {
     smcWarningEl.textContent = "Garra NÃO recomendada.";
     smcWarningEl.classList.remove("is-hidden");
-  } else if (isElectric && selectedResult.availableForce < pieceWeight * 5) {
+  } else if (isElectric && calculation.availableForce < pieceWeight * 5) {
     smcWarningEl.textContent = "SMC recomenda entre 5x e 10x o peso da peça";
     smcWarningEl.classList.remove("is-hidden");
   } else if (isVacuumElectric && values.mass > 5) {
@@ -974,8 +992,8 @@ function updateUI(options = {}) {
     smcWarningEl.classList.add("is-hidden");
   }
 
-  if (selectedResult) {
-    updateChart(selectedResult, values);
+  if (calculation) {
+    updateChart(calculation, values);
   }
   renderTable(results, best?.model || null);
 }
