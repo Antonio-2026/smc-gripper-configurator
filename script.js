@@ -112,6 +112,7 @@ const movementFieldEl = document.getElementById("movementField");
 const movementEl = document.getElementById("movement");
 const safetyFactorFieldEl = document.getElementById("safetyFactor").closest("label");
 const zgsSafetyNoteEl = document.getElementById("zgsSafetyNote");
+const zgsPressureNoteEl = document.getElementById("zgsPressureNote");
 const comparisonHeaderRowEl = document.getElementById("comparisonHeaderRow");
 
 const chart = new Chart(document.getElementById("forceChart"), {
@@ -332,6 +333,7 @@ function syncGripperSpecificFields() {
   cupDiameterEl.disabled = !isVacuumElectric;
   document.getElementById("safetyFactor").disabled = false;
   zgsSafetyNoteEl.classList.toggle("is-hidden", !isVacuum);
+  zgsPressureNoteEl.classList.toggle("is-hidden", !isVacuum);
 
   if (isVacuum) {
     const values = getInputs();
