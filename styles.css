@@ -35,9 +35,9 @@ body {
 h1, h2, h3 { margin-top: 0; }
 h1 { margin-bottom: 0.35rem; font-size: clamp(1.4rem, 2vw, 2rem); }
 h2, h3 { margin-bottom: 0.35rem; }
-.smc-logo {
+.smc-logo svg {
   height: 42px;
-  object-fit: contain;
+  width: auto;
 }
 
 .smc-text h1 {
