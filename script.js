@@ -770,14 +770,14 @@ function updateChart(calculation, values) {
     return;
   }
 
-  if (selectedGripper?.type === TIPOS_GARRA.VACUO_ELETRICO) {
+  if (selectedGripper?.type === "vacuo_eletrico") {
     chartTitleEl.textContent = "Força disponível (constante)";
-    chart.options.scales.x.title.text = "Condição";
+    chart.options.scales.x.title.text = "Pressão (MPa)";
     chart.options.scales.y.title.text = "Força (N)";
-    const labels = ["P1", "P2", "P3", "P4", "P5", "P6"];
+    const labels = [0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7];
     const baseForce = calculation.availableForce;
     const datasets = [
-      { label: "ZXPE5 (N)", data: [baseForce, baseForce, baseForce, baseForce, baseForce, baseForce], borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.25)", fill: true, tension: 0, pointRadius: 2 },
+      { label: "ZXPE5 (N)", data: [baseForce, baseForce, baseForce, baseForce, baseForce, baseForce, baseForce], borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.25)", fill: true, tension: 0, pointRadius: 2 },
     ];
     const chartKey = JSON.stringify([labels, datasets]);
     if (chartKey === lastChartKey) return;
@@ -791,6 +791,26 @@ function updateChart(calculation, values) {
   chartTitleEl.textContent = "Curva Força x Pressão";
   chart.options.scales.x.title.text = "Pressão (MPa)";
   chart.options.scales.y.title.text = "Força (N)";
+
+  if (selectedGripper?.type === "vacuo") {
+    const baseForce = calculation.availableForce;
+    const currentPressure = values.pressure || calculation.referencePressure || 0.5;
+    const pressures = [0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7];
+    const forces = pressures.map((pressureStep) => baseForce * (pressureStep / currentPressure));
+    const currentPoint = pressures.map((pressureStep) => (Math.abs(pressureStep - currentPressure) < 0.026 ? baseForce : null));
+    const datasets = [
+      { label: "Curva da garra (N)", data: forces, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
+      { label: "Ponto atual", data: currentPoint, borderColor: "#f59e0b", backgroundColor: "#f59e0b", showLine: false, pointRadius: 6 },
+    ];
+    const chartKey = JSON.stringify([pressures, datasets]);
+    if (chartKey === lastChartKey) return;
+
+    chart.data.labels = pressures;
+    chart.data.datasets = datasets;
+    chart.update("none");
+    lastChartKey = chartKey;
+    return;
+  }
 
   const curve = buildPressureCurve(calculation, calculation.referencePressure);
   const currentPointPressure = isVacuumType(values.type) ? values.pressure : calculation.referencePressure ? values.pressure : 0.1;
