@@ -114,6 +114,7 @@ const suctionAreaEl = document.getElementById("suctionArea");
 const movementFieldEl = document.getElementById("movementField");
 const movementEl = document.getElementById("movement");
 const safetyFactorFieldEl = document.getElementById("safetyFactor").closest("label");
+const zgsSafetyNoteEl = document.getElementById("zgsSafetyNote");
 const comparisonHeaderRowEl = document.getElementById("comparisonHeaderRow");
 
 const chart = new Chart(document.getElementById("forceChart"), {
@@ -329,6 +330,26 @@ function syncGripperSpecificFields() {
   cupsEl.disabled = !isVacuumElectric;
   cupDiameterEl.disabled = !isVacuumElectric;
   document.getElementById("safetyFactor").disabled = false;
+  zgsSafetyNoteEl.classList.toggle("is-hidden", !isVacuum);
+
+  if (isVacuum) {
+    const values = getInputs();
+    const recommendedSF = values.movement === "vertical" ? 8 : 4;
+    zgsSafetyNoteEl.style.color = values.safetyFactor !== recommendedSF ? "#c28a00" : "#16a34a";
+  } else {
+    zgsSafetyNoteEl.style.color = "";
+  }
+}
+
+function getBestGripper(results) {
+  if (!results.length) return null;
+
+  const safeOptions = results.filter((result) => result.safe);
+  if (safeOptions.length > 0) {
+    return safeOptions.sort((a, b) => a.marginPercent - b.marginPercent)[0];
+  }
+
+  return results.sort((a, b) => b.marginPercent - a.marginPercent)[0];
 }
 
 function getPerFingerForce(gripper, mode) {
@@ -888,11 +909,7 @@ function updateUI(options = {}) {
   }
 
   const results = compatibleGrippers.map((gripper) => calculateForGripper(gripper, values));
-  const validResults = results.filter((result) => result.availableForce > 0);
-  let best = validResults.sort((a, b) => b.availableForce - a.availableForce)[0] || null;
-  if (!best) {
-    best = results.sort((a, b) => b.availableForce - a.availableForce)[0] || null;
-  }
+  const best = getBestGripper(results);
   const electricBest = isElectric ? getElectricBestRecommendation(electricRecommendationPool, values) : null;
 
   if (
@@ -963,11 +980,15 @@ function updateUI(options = {}) {
       : "Nenhuma combinação elétrica (60/100/140 N) foi aprovada para os parâmetros atuais.";
   } else if (isVacuum) {
     recommendationEl.textContent = best
-      ? `Melhor opção ZGS: ${best.model}.`
+      ? best.safe
+        ? `Melhor opção ZGS: ${best.model} (dimensionamento otimizado).`
+        : `Nenhuma opção ZGS atende totalmente — sugerindo a mais próxima: ${best.model}.`
       : "Nenhuma configuração ZGS aprovada para os parâmetros atuais.";
   } else if (isVacuumElectric) {
     recommendationEl.textContent = best
-      ? `Melhor opção ZXPE5: ${best.model}.`
+      ? best.safe
+        ? `Melhor opção ZXPE5: ${best.model} (dimensionamento otimizado).`
+        : `Nenhuma opção ZXPE5 atende totalmente — sugerindo a mais próxima: ${best.model}.`
       : "Nenhuma configuração ZXPE5 aprovada para os parâmetros atuais.";
   } else {
     recommendationEl.textContent = best
