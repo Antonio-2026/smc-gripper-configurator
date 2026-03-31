@@ -16,8 +16,7 @@ const grippers = [
   { model: "ZGS 300x180", type: "vacuo", size: "300x180", ejectors: [1, 2, 3], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZGS 400x240", type: "vacuo", size: "400x240", ejectors: [2, 4, 6], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZXPE5", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 5, maxVacuum: -74, flowRate: 4.5, compatible_shapes: ["flat", "rectangular"] },
-  { model: "ZXP7", type: "vacuo_modular", cups: [1, 2, 4], maxVacuum: -84, flowRate: 17, maxWorkLoad: 7, reference_pressure: 0.5, compatible_shapes: ["flat", "rectangular"] },
-  { model: "ZXP7 (UR)", type: "vacuo", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
+  { model: "ZXP7", type: "vacuo_modular", cups: [1, 2, 4], maxVacuum: -84, flowRate: 17, maxWorkLoad: 7, compatible_shapes: ["flat", "rectangular"] },
 ];
 
 const ZGS_CATALOG = {
@@ -53,7 +52,7 @@ const defaultsByType = {
   eletrica: { workpieceShape: "rectangular", gripperCount: 1, friction: 0.2, offset: 10, mountingType: "standard", configuredForce: 100 },
   vacuo: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, suctionArea: 1.0, ejectors: 2, movement: "horizontal" },
   vacuo_eletrico: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, cups: 2, cupDiameter: 20, movement: "horizontal" },
-  vacuo_modular: { workpieceShape: "flat", gripperCount: 1, pressure: 0.5, cups: 2, cupDiameter: 20 },
+  vacuo_modular: { workpieceShape: "flat", cups: 2, cupDiameter: 20, pressure: 0.5 },
 };
 
 const ELECTRIC_FORCE_CURVES = [60, 100, 140];
@@ -151,7 +150,7 @@ function isVacuumElectricType(type = selectedType) {
 }
 
 function isVacuumModularType(type = selectedType) {
-  return type === TIPOS_GARRA.VACUO_MODULAR;
+  return type === "vacuo_modular";
 }
 
 function isElectricVacuumType(type = selectedType) {
@@ -293,7 +292,7 @@ function syncGripperSpecificFields() {
   const isElectric = isElectricType();
   const isVacuum = isVacuumType();
   const isVacuumElectric = isVacuumElectricType();
-  const isVacuumModular = selectedType === TIPOS_GARRA.VACUO_MODULAR;
+  const isVacuumModular = isVacuumModularType();
 
   movementFieldEl.classList.toggle("is-hidden", !isVacuum);
   vacuumAreaFieldEl.classList.toggle("is-hidden", !isVacuum);
@@ -540,26 +539,15 @@ function calculateForGripper(gripper, values) {
   }
 
   if (gripper.type === TIPOS_GARRA.VACUO_MODULAR) {
-    if (values.mass > 7) {
-      return {
-        model: `${gripper.model}`,
-        requiredForce: 0,
-        availableForce: 0,
-        safe: false,
-        marginPercent: -100,
-        error: "Carga excede limite da ZXP7 (7 kg)",
-      };
-    }
-
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    const vacuum = 84000;
+    const vacuum = 84000; // Pa (equivalente a -84 kPa)
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
 
     return {
       model: `${gripper.model} (${values.cups} ventosas)`,
-      type: TIPOS_GARRA.VACUO_MODULAR,
+      type: "vacuo_modular",
       requiredForce,
       availableForce,
       excessForce: availableForce - requiredForce,
