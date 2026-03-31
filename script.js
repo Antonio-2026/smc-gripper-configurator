@@ -426,12 +426,7 @@ function getZGSForce(size, ejectors, pressure, suctionArea = 1) {
   const pressureFactor = getVacuumFactor(pressure, reference.pressure);
   const vacuum = reference.vacuum * pressureFactor;
   const flow = reference.flow ? reference.flow * pressureFactor : null;
-  const flowFactor = getFlowFactor(size, ejectors, pressure);
-
-  let force = reference.force * pressureFactor;
-  force *= suctionArea;
-  force *= flowFactor;
-  force = Math.min(force, reference.force);
+  const force = reference.force * pressureFactor * suctionArea;
 
   return { force, vacuum, flow };
 }
@@ -440,16 +435,15 @@ function getMovementFactor(movement) {
   return movement === "vertical" ? 0.5 : 1;
 }
 
-function generateZGSChartData(size, ejectors, suctionArea, movement) {
+function generateZGSChartData(size, ejectors, suctionArea, safetyFactor) {
   const pressures = [0.2, 0.3, 0.4, 0.45, 0.5, 0.58, 0.6];
 
   return pressures.map((p) => {
     const result = getZGSForce(size, ejectors, p, suctionArea);
-    const force = result.force * getMovementFactor(movement);
 
     return {
       x: p,
-      y: force,
+      y: result.force / safetyFactor,
     };
   });
 }
@@ -533,7 +527,7 @@ function calculateForGripper(gripper, values) {
   }
 
   if (isVacuumGripper(gripper)) {
-    const { pressure, ejectors, suctionArea, movement } = values;
+    const { pressure, ejectors, suctionArea, safetyFactor } = values;
     const zgs = getZGSForce(
       gripper.size,
       ejectors,
@@ -551,10 +545,9 @@ function calculateForGripper(gripper, values) {
       };
     }
 
-    const movementFactor = getMovementFactor(movement);
-    const availableForce = zgs.force * movementFactor;
+    const availableForce = zgs.force / safetyFactor;
     const requiredForce = values.mass * 9.81;
-    const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
+    const marginPercent = requiredForce === 0 ? 0 : ((availableForce - requiredForce) / requiredForce) * 100;
 
     return {
       model: gripper.model,
@@ -872,12 +865,12 @@ function updateChart(calculation, values) {
   chart.options.scales.y.title.text = "Força (N)";
 
   if (selectedGripper?.type === "vacuo") {
-    const zgsCurve = generateZGSChartData(selectedGripper.size, values.ejectors, values.suctionArea, values.movement);
+    const zgsCurve = generateZGSChartData(selectedGripper.size, values.ejectors, values.suctionArea, values.safetyFactor);
     const pressures = zgsCurve.map((point) => point.x);
     const forces = zgsCurve.map((point) => point.y);
     const currentPressure = values.pressure || 0.5;
     const currentZGS = getZGSForce(selectedGripper.size, values.ejectors, currentPressure, values.suctionArea);
-    const currentForce = currentZGS.force * getMovementFactor(values.movement);
+    const currentForce = currentZGS.force / values.safetyFactor;
     const currentPoint = pressures.map((pressureStep) => (
       Math.abs(pressureStep - currentPressure) < 0.026
         ? currentForce
