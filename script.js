@@ -16,7 +16,7 @@ const grippers = [
   { model: "ZGS 300x180", type: "vacuo", size: "300x180", ejectors: [1, 2, 3], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZGS 400x240", type: "vacuo", size: "400x240", ejectors: [2, 4, 6], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZXPE5", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 5, maxVacuum: -74, flowRate: 4.5, compatible_shapes: ["flat", "rectangular"] },
-  { model: "ZXP7 (UR)", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
+  { model: "ZXP7 (UR)", type: "vacuo", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
 ];
 
 const ZGS_CATALOG = {
