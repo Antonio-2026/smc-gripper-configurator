@@ -407,6 +407,41 @@ function getDefaultPressure(size) {
   return 0.45;
 }
 
+function getVacuumFromPressure(pressureMPa) {
+  return -120 * pressureMPa;
+}
+
+function getZGSForce(size, ejectors, pressureMPa, suctionArea = 1) {
+  const base = ZGS_DATA[size]?.[ejectors];
+  if (!base) return { full: 0, half: null, vacuum: 0 };
+
+  const vacuum = Math.abs(getVacuumFromPressure(pressureMPa));
+  const referenceVacuum = 60;
+  const fullForce = base.full * (vacuum / referenceVacuum) * suctionArea;
+  const halfForce = base.half
+    ? base.half * (vacuum / referenceVacuum) * suctionArea
+    : null;
+
+  return {
+    full: fullForce,
+    half: halfForce,
+    vacuum,
+  };
+}
+
+function generateZGSChartData(size, ejectors, suctionArea) {
+  const pressures = [0.2, 0.3, 0.4, 0.5, 0.6];
+
+  return pressures.map((p) => {
+    const result = getZGSForce(size, ejectors, p, suctionArea);
+
+    return {
+      x: p,
+      y: result.full,
+    };
+  });
+}
+
 function calculateRequiredForce(values) {
   const weight = values.mass * 9.81;
 
@@ -486,9 +521,15 @@ function calculateForGripper(gripper, values) {
   }
 
   if (isVacuumGripper(gripper)) {
-    const data = ZGS_DATA[gripper.size]?.[values.ejectors];
+    const { pressure, ejectors, suctionArea, movement } = values;
+    const zgs = getZGSForce(
+      gripper.size,
+      ejectors,
+      pressure,
+      suctionArea
+    );
 
-    if (!data) {
+    if (!zgs.full) {
       return {
         model: gripper.model,
         requiredForce: 0,
@@ -498,26 +539,9 @@ function calculateForGripper(gripper, values) {
       };
     }
 
-    let baseForce;
-
-    if (values.suctionArea >= 0.99) {
-      baseForce = data.full;
-    } else if (values.suctionArea <= 0.5) {
-      baseForce = data.half;
-    } else {
-      baseForce = data.half == null
-        ? data.full
-        : data.full + (data.half - data.full) * (1 - values.suctionArea);
-    }
-
-    let availableForce = ajustarMovimento(baseForce, values.movement);
-    availableForce = ajustarFatorSeguranca(
-      availableForce,
-      values.movement,
-      values.safetyFactor
-    );
+    const movementFactor = movement === "vertical" ? 0.7 : 1;
+    const availableForce = zgs.full * movementFactor;
     const requiredForce = values.mass * 9.81;
-
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
 
     return {
@@ -531,6 +555,7 @@ function calculateForGripper(gripper, values) {
       marginPercent,
       effectiveGripperCount: 1,
       baseAvailableForce: availableForce,
+      vacuum: zgs.vacuum,
       configuredForce: null,
       referencePressure: null,
       forceReductionFactor: null,
@@ -834,13 +859,19 @@ function updateChart(calculation, values) {
   chart.options.scales.y.title.text = "Força (N)";
 
   if (selectedGripper?.type === "vacuo") {
-    const baseForce = calculation.availableForce;
-    const currentPressure = values.pressure || calculation.referencePressure || 0.5;
-    const pressures = [0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7];
-    const forces = pressures.map((pressureStep) => baseForce * (pressureStep / currentPressure));
-    const currentPoint = pressures.map((pressureStep) => (Math.abs(pressureStep - currentPressure) < 0.026 ? baseForce : null));
+    const zgsCurve = generateZGSChartData(selectedGripper.size, values.ejectors, values.suctionArea);
+    const pressures = zgsCurve.map((point) => point.x);
+    const forces = zgsCurve.map((point) => point.y);
+    const currentPressure = values.pressure || 0.5;
+    const currentZGS = getZGSForce(selectedGripper.size, values.ejectors, currentPressure, values.suctionArea);
+    const movementFactor = values.movement === "vertical" ? 0.7 : 1;
+    const currentPoint = pressures.map((pressureStep) => (
+      Math.abs(pressureStep - currentPressure) < 0.026
+        ? currentZGS.full * movementFactor
+        : null
+    ));
     const datasets = [
-      { label: "Curva da garra (N)", data: forces, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
+      { label: "ZGS Force vs Pressure", data: forces, borderColor: "#0072ce", backgroundColor: "rgba(0,114,206,0.10)", fill: true, tension: 0.2, pointRadius: 2 },
       { label: "Ponto atual", data: currentPoint, borderColor: "#f59e0b", backgroundColor: "#f59e0b", showLine: false, pointRadius: 6 },
     ];
     const chartKey = JSON.stringify([pressures, datasets]);
