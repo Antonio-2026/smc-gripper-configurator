@@ -18,10 +18,21 @@ const grippers = [
   { model: "ZXPE5", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 5, maxVacuum: -74, flowRate: 4.5, compatible_shapes: ["flat", "rectangular"] },
 ];
 
-const ZGS_REFERENCE = {
-  "200x120": { vacuum: 63, force: 440 },
-  "300x180": { vacuum: 63, force: 880 },
-  "400x240": { vacuum: 75, force: 2144 },
+const ZGS_CATALOG = {
+  "200x120": {
+    1: { pressure: 0.45, vacuum: 63, force: 440 },
+    2: { pressure: 0.45, vacuum: 62, force: 440 },
+  },
+  "300x180": {
+    1: { pressure: 0.45, vacuum: 63, force: 880 },
+    2: { pressure: 0.45, vacuum: 62, force: 880 },
+    3: { pressure: 0.45, vacuum: 60, force: 880 },
+  },
+  "400x240": {
+    2: { pressure: 0.58, vacuum: 75, force: 2144, flow: 322 },
+    4: { pressure: 0.6, vacuum: 75, force: 2144, flow: 646 },
+    6: { pressure: 0.6, vacuum: 75, force: 2144, flow: 1022 },
+  },
 };
 
 const TIPOS_GARRA = {
@@ -396,44 +407,45 @@ function getDefaultPressure(size) {
   return 0.45;
 }
 
-function getVacuumFromPressure(pressureMPa) {
-  if (pressureMPa <= 0.2) return -25;
-  if (pressureMPa <= 0.3) return -40;
-  if (pressureMPa <= 0.4) return -55;
-  if (pressureMPa <= 0.5) return -63;
-  return -75;
+function getVacuumFactor(inputPressure, refPressure) {
+  if (!refPressure || refPressure <= 0) return 0;
+  return Math.min(inputPressure / refPressure, 1);
 }
 
-function getZGSForce(size, pressureMPa, suctionArea = 1) {
-  const reference = ZGS_REFERENCE[size];
-  if (!reference) return { force: 0, vacuum: 0 };
+function getFlowFactor(size, ejectors, pressure) {
+  const reference = ZGS_CATALOG[size]?.[ejectors];
+  if (!reference || !reference.flow) return 1;
 
-  const vacuum = Math.abs(getVacuumFromPressure(pressureMPa));
-  const vacuumFactor = vacuum / reference.vacuum;
-  const force = reference.force * vacuumFactor * suctionArea;
-
-  return {
-    force,
-    vacuum,
-  };
+  return getVacuumFactor(pressure, reference.pressure);
 }
 
-function getLeakageFactor(ejectors) {
-  if (ejectors <= 2) return 0.75;
-  if (ejectors <= 4) return 0.9;
-  return 1.0;
+function getZGSForce(size, ejectors, pressure, suctionArea = 1) {
+  const reference = ZGS_CATALOG[size]?.[ejectors];
+  if (!reference) return { force: 0, vacuum: 0, flow: 0 };
+
+  const pressureFactor = getVacuumFactor(pressure, reference.pressure);
+  const vacuum = reference.vacuum * pressureFactor;
+  const flow = reference.flow ? reference.flow * pressureFactor : null;
+  const flowFactor = getFlowFactor(size, ejectors, pressure);
+
+  let force = reference.force * pressureFactor;
+  force *= suctionArea;
+  force *= flowFactor;
+  force = Math.min(force, reference.force);
+
+  return { force, vacuum, flow };
 }
 
 function getMovementFactor(movement) {
-  return movement === "vertical" ? 0.7 : 1;
+  return movement === "vertical" ? 0.5 : 1;
 }
 
 function generateZGSChartData(size, ejectors, suctionArea, movement) {
-  const pressures = [0.2, 0.3, 0.4, 0.5, 0.6];
+  const pressures = [0.2, 0.3, 0.4, 0.45, 0.5, 0.58, 0.6];
 
   return pressures.map((p) => {
-    const result = getZGSForce(size, p, suctionArea);
-    const force = result.force * getLeakageFactor(ejectors) * getMovementFactor(movement);
+    const result = getZGSForce(size, ejectors, p, suctionArea);
+    const force = result.force * getMovementFactor(movement);
 
     return {
       x: p,
@@ -524,6 +536,7 @@ function calculateForGripper(gripper, values) {
     const { pressure, ejectors, suctionArea, movement } = values;
     const zgs = getZGSForce(
       gripper.size,
+      ejectors,
       pressure,
       suctionArea
     );
@@ -538,9 +551,8 @@ function calculateForGripper(gripper, values) {
       };
     }
 
-    const leakageFactor = getLeakageFactor(ejectors);
     const movementFactor = getMovementFactor(movement);
-    const availableForce = zgs.force * leakageFactor * movementFactor;
+    const availableForce = zgs.force * movementFactor;
     const requiredForce = values.mass * 9.81;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
 
@@ -556,6 +568,7 @@ function calculateForGripper(gripper, values) {
       effectiveGripperCount: 1,
       baseAvailableForce: availableForce,
       vacuum: zgs.vacuum,
+      flow: zgs.flow,
       configuredForce: null,
       referencePressure: null,
       forceReductionFactor: null,
@@ -863,8 +876,8 @@ function updateChart(calculation, values) {
     const pressures = zgsCurve.map((point) => point.x);
     const forces = zgsCurve.map((point) => point.y);
     const currentPressure = values.pressure || 0.5;
-    const currentZGS = getZGSForce(selectedGripper.size, currentPressure, values.suctionArea);
-    const currentForce = currentZGS.force * getLeakageFactor(values.ejectors) * getMovementFactor(values.movement);
+    const currentZGS = getZGSForce(selectedGripper.size, values.ejectors, currentPressure, values.suctionArea);
+    const currentForce = currentZGS.force * getMovementFactor(values.movement);
     const currentPoint = pressures.map((pressureStep) => (
       Math.abs(pressureStep - currentPressure) < 0.026
         ? currentForce
