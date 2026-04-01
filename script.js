@@ -17,7 +17,6 @@ const grippers = [
   { model: "ZGS 400x240", type: "vacuo", size: "400x240", ejectors: [2, 4, 6], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZXPE5", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 5, maxVacuum: -74, flowRate: 4.5, compatible_shapes: ["flat", "rectangular"] },
   { model: "ZXP7", type: "vacuo_zxp7", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
-  { model: "ZXP7", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
 ];
 
 const ZGS_CATALOG = {
@@ -83,6 +82,7 @@ const magnetCountFieldEl = document.getElementById("magnetCountField");
 const magnetCountEl = document.getElementById("magnetCount");
 const pressureFieldEl = document.getElementById("pressureField");
 const vacuumPressureFieldEl = document.getElementById("vacuumPressureField");
+const vacuumPressureFixedFieldEl = document.getElementById("vacuumPressureFixedField");
 const vacuumNoteEl = document.getElementById("vacuumNote");
 const workpieceShapeEl = document.getElementById("workpieceShape");
 const rectangularDimensionsEl = document.getElementById("rectangularDimensions");
@@ -190,6 +190,7 @@ function isVacuumModularGripper(gripper) {
 
 function getInputs() {
   const vacuumFeedPressure = Number(document.getElementById("vacuumPressure").value);
+  const vacuumFixedPressure = Number(document.getElementById("vacuumPressureFixed").value);
   const pneumaticPressure = Number(document.getElementById("pressure").value);
   const effectivePressure = (isVacuumElectricType() || isVacuumZXP7Type() || isVacuumModularType())
     ? vacuumFeedPressure
@@ -205,6 +206,7 @@ function getInputs() {
     friction: Number(document.getElementById("friction").value),
     safetyFactor: Number(document.getElementById("safetyFactor").value),
     pressure: effectivePressure,
+    vacuumFixedPressure,
     mode: document.getElementById("mode").value,
     offset: Number(document.getElementById("offset").value),
     parallelMode: parallelModeEl.value,
@@ -356,7 +358,8 @@ function syncGripperSpecificFields() {
   magnetNoteEl.classList.toggle("is-hidden", !isMagnetic);
   materialWarningEl.classList.toggle("is-hidden", !isMagnetic);
   pressureFieldEl.classList.toggle("is-hidden", isMagnetic || isElectric || isVacuumElectric || isVacuumZXP7 || isVacuumModular);
-  vacuumPressureFieldEl.classList.toggle("is-hidden", !(isVacuumElectric || isVacuumZXP7 || isVacuumModular));
+  vacuumPressureFixedFieldEl.classList.toggle("is-hidden", !isVacuumElectric);
+  vacuumPressureFieldEl.classList.toggle("is-hidden", !(isVacuumZXP7 || isVacuumModular));
   vacuumNoteEl.classList.toggle("is-hidden", !(isVacuumElectric || isVacuumZXP7 || isVacuumModular));
   gripperCountFieldEl.classList.toggle("is-hidden", isMagnetic || isVacuum || isVacuumElectric || isVacuumZXP7 || isVacuumModular);
   mountingTypeFieldEl.classList.toggle("is-hidden", !isElectric);
@@ -579,10 +582,9 @@ function calculateForGripper(gripper, values) {
   }
 
   if (gripper.type === TIPOS_GARRA.VACUO_ELETRICO) {
+    if (gripper.model !== "ZXPE5") return null;
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    const vacuum = gripper.model === "ZXP7"
-      ? getVacuumFromPressure(values.pressure)
-      : Math.abs(gripper.maxVacuum) * 1000;
+    const vacuum = 74000;
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -722,7 +724,7 @@ function buildPressureCurve(result, referencePressure) {
   const pressureSteps = [];
   const forceSteps = [];
 
-  if (result.type === TIPOS_GARRA.VACUO || result.type === TIPOS_GARRA.VACUO_ELETRICO || result.type === TIPOS_GARRA.VACUO_ZXP7 || result.type === TIPOS_GARRA.VACUO_MODULAR) {
+  if (result.type === TIPOS_GARRA.VACUO || result.type === TIPOS_GARRA.VACUO_ELETRICO || result.type === TIPOS_GARRA.VACUO_MODULAR) {
     for (let pressure = 0.3; pressure <= 0.700001; pressure += 0.05) {
       const roundedPressure = Number(pressure.toFixed(2));
       pressureSteps.push(roundedPressure);
@@ -810,7 +812,7 @@ function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
           ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
           <div class="card-body">
             <p>${detailLabel}</p>
-            <p>${isVacuumGripper(gripper) ? "Sistema a vácuo ZGS" : isElectricVacuumGripper(gripper) ? "Sistema a vácuo (ZXPE5 / ZXP7)" : isVacuumZXP7Gripper(gripper) ? "Sistema a vácuo ZXP7" : isVacuumModularGripper(gripper) ? "Sistema a vácuo modular ZXP7" : isMagneticGripper(gripper) || isElectricGripper(gripper) ? "Garras em paralelo: Sim" : `Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}`}</p>
+            <p>${isVacuumGripper(gripper) ? "Sistema a vácuo ZGS" : isElectricVacuumGripper(gripper) ? "Sistema a vácuo ZXPE5" : isVacuumZXP7Gripper(gripper) ? "Sistema a vácuo ZXP7" : isVacuumModularGripper(gripper) ? "Sistema a vácuo modular ZXP7" : isMagneticGripper(gripper) || isElectricGripper(gripper) ? "Garras em paralelo: Sim" : `Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}`}</p>
           </div>
         </button>`;
     })
@@ -1076,6 +1078,7 @@ function applyTypeDefaults(type) {
   document.getElementById("material").value = defaults.material ?? document.getElementById("material").value;
   document.getElementById("pressure").value = defaults.pressure ?? document.getElementById("pressure").value;
   document.getElementById("vacuumPressure").value = defaults.pressure ?? document.getElementById("vacuumPressure").value;
+  document.getElementById("vacuumPressureFixed").value = "-74";
   mountingTypeEl.value = defaults.mountingType ?? mountingTypeEl.value;
   configuredForceEl.value = defaults.configuredForce ?? configuredForceEl.value;
   suctionAreaEl.value = defaults.suctionArea ?? suctionAreaEl.value;
