@@ -1252,23 +1252,6 @@ function handleCardSelection(event) {
   updateUI();
 }
 
-function handleTypeSelection(event) {
-  const nextType = event.target.value;
-  if (!nextType || nextType === selectedType) return;
-
-  applyTypeDefaults(nextType);
-  syncShapeOptions();
-  syncGeometryFields();
-  updateUI();
-}
-
-function handleTechnologyCardSelection(event) {
-  const trigger = event.target.closest("[data-type]");
-  if (!trigger) return;
-  tipoGarraSelectEl.value = trigger.dataset.type;
-  handleTypeSelection({ target: { value: trigger.dataset.type } });
-}
-
 function init() {
   applyTypeDefaults(selectedType);
   renderTechnologyCards();
@@ -1276,8 +1259,22 @@ function init() {
   syncShapeOptions();
   syncGeometryFields();
   syncGripperSpecificFields();
-  tipoGarraSelectEl.addEventListener("change", handleTypeSelection);
-  technologySelectorEl.addEventListener("click", handleTechnologyCardSelection);
+  technologySelectorEl.querySelectorAll(".technology-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const type = card.dataset.type;
+      selectedType = type;
+      applyTypeDefaults(type);
+      renderTechnologyCards();
+      updateUI();
+    });
+  });
+  tipoGarraSelectEl.addEventListener("change", (event) => {
+    const type = event.target.value;
+    selectedType = type;
+    applyTypeDefaults(type);
+    renderTechnologyCards();
+    updateUI();
+  });
   gripperCardsEl.addEventListener("click", handleCardSelection);
   form.addEventListener("input", updateUI);
   form.addEventListener("change", handleFormChange);
