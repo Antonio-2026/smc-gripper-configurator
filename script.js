@@ -189,6 +189,12 @@ function isVacuumModularGripper(gripper) {
 }
 
 function getInputs() {
+  const vacuumFeedPressure = Number(document.getElementById("vacuumPressure").value);
+  const pneumaticPressure = Number(document.getElementById("pressure").value);
+  const effectivePressure = (isVacuumElectricType() || isVacuumZXP7Type() || isVacuumModularType())
+    ? vacuumFeedPressure
+    : pneumaticPressure;
+
   return {
     type: selectedType,
     workpieceShape: workpieceShapeEl.value,
@@ -198,7 +204,7 @@ function getInputs() {
     mass: Number(document.getElementById("mass").value),
     friction: Number(document.getElementById("friction").value),
     safetyFactor: Number(document.getElementById("safetyFactor").value),
-    pressure: Number(document.getElementById("pressure").value),
+    pressure: effectivePressure,
     mode: document.getElementById("mode").value,
     offset: Number(document.getElementById("offset").value),
     parallelMode: parallelModeEl.value,
@@ -214,6 +220,18 @@ function getInputs() {
     cups: Number(cupsEl?.value || 2),
     cupDiameter: Number(cupDiameterEl?.value || 20),
   };
+}
+
+function getVacuumFromPressure(pressure) {
+  const p1 = 0.3;
+  const v1 = 60000;
+  const p2 = 0.5;
+  const v2 = 84000;
+
+  if (pressure <= p1) return v1;
+  if (pressure >= p2) return v2;
+
+  return v1 + ((pressure - p1) * (v2 - v1)) / (p2 - p1);
 }
 
 function getAllowedShapes(type = selectedType) {
@@ -539,7 +557,7 @@ function calculateForGripper(gripper, values) {
 
   if (gripper.type === TIPOS_GARRA.VACUO_ZXP7) {
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    const vacuum = 84000; // -84 kPa
+    const vacuum = getVacuumFromPressure(values.pressure);
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -562,12 +580,9 @@ function calculateForGripper(gripper, values) {
 
   if (gripper.type === TIPOS_GARRA.VACUO_ELETRICO) {
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    let vacuum;
-    if (gripper.model === "ZXP7") {
-      vacuum = 84000; // -84 kPa
-    } else {
-      vacuum = 74000; // ZXPE5
-    }
+    const vacuum = gripper.model === "ZXP7"
+      ? getVacuumFromPressure(values.pressure)
+      : Math.abs(gripper.maxVacuum) * 1000;
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -590,7 +605,7 @@ function calculateForGripper(gripper, values) {
 
   if (gripper.type === TIPOS_GARRA.VACUO_MODULAR) {
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    const vacuum = 84000; // Pa (equivalente a -84 kPa)
+    const vacuum = getVacuumFromPressure(values.pressure);
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -950,15 +965,22 @@ function updateChart(calculation, values) {
     chart.options.scales.x.title.text = "Pressão (MPa)";
     chart.options.scales.y.title.text = "Força (N)";
 
-    const labels = [0.3, 0.4, 0.5, 0.6];
-    const baseForce = calculation.availableForce;
+    const labels = [0.3, 0.4, 0.5, 0.55];
+    const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
+    const forceByPressure = labels.map((pressure) => area * getVacuumFromPressure(pressure) * values.cups);
+    const currentPoint = labels.map((pressure) => (
+      Math.abs(pressure - values.pressure) < 0.026
+        ? calculation.availableForce
+        : null
+    ));
     const datasets = [{
       label: "ZXP7 (N)",
-      data: [baseForce, baseForce, baseForce, baseForce],
+      data: forceByPressure,
       borderColor: "#0072ce",
       backgroundColor: "rgba(0,114,206,0.2)",
       fill: true,
-    }];
+    },
+    { label: "Ponto atual", data: currentPoint, borderColor: "#f59e0b", backgroundColor: "#f59e0b", showLine: false, pointRadius: 6 }];
     const chartKey = JSON.stringify([labels, datasets]);
     if (chartKey === lastChartKey) return;
 
@@ -1053,6 +1075,7 @@ function applyTypeDefaults(type) {
   document.getElementById("thickness").value = defaults.thickness ?? document.getElementById("thickness").value;
   document.getElementById("material").value = defaults.material ?? document.getElementById("material").value;
   document.getElementById("pressure").value = defaults.pressure ?? document.getElementById("pressure").value;
+  document.getElementById("vacuumPressure").value = defaults.pressure ?? document.getElementById("vacuumPressure").value;
   mountingTypeEl.value = defaults.mountingType ?? mountingTypeEl.value;
   configuredForceEl.value = defaults.configuredForce ?? configuredForceEl.value;
   suctionAreaEl.value = defaults.suctionArea ?? suctionAreaEl.value;
@@ -1265,6 +1288,9 @@ function updateUI(options = {}) {
     smcWarningEl.classList.remove("is-hidden");
   } else if (isVacuum && calculation.marginPercent < 0) {
     smcWarningEl.textContent = "Garra NÃO recomendada.";
+    smcWarningEl.classList.remove("is-hidden");
+  } else if (isVacuumZXP7 && (values.pressure < 0.3 || values.pressure > 0.55)) {
+    smcWarningEl.textContent = "Fora da faixa recomendada da ZXP7";
     smcWarningEl.classList.remove("is-hidden");
   } else if (isElectric && calculation.availableForce < pieceWeight * 5) {
     smcWarningEl.textContent = "SMC recomenda entre 5x e 10x o peso da peça";
