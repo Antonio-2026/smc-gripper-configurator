@@ -16,7 +16,7 @@ const grippers = [
   { model: "ZGS 300x180", type: "vacuo", size: "300x180", ejectors: [1, 2, 3], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZGS 400x240", type: "vacuo", size: "400x240", ejectors: [2, 4, 6], compatible_shapes: ["flat", "rectangular"] },
   { model: "ZXPE5", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 5, maxVacuum: -74, flowRate: 4.5, compatible_shapes: ["flat", "rectangular"] },
-  { model: "ZXP7", type: "vacuo_modular", cups: [1, 2, 4], maxVacuum: -84, flowRate: 17, maxWorkLoad: 7, compatible_shapes: ["flat", "rectangular"] },
+  { model: "ZXP7", type: "vacuo_eletrico", cups: [1, 2, 4], maxWorkLoad: 7, maxVacuum: -84, flowRate: 17, compatible_shapes: ["flat", "rectangular"] },
 ];
 
 const ZGS_CATALOG = {
@@ -517,7 +517,12 @@ function calculateForGripper(gripper, values) {
 
   if (gripper.type === TIPOS_GARRA.VACUO_ELETRICO) {
     const area = Math.PI * Math.pow((values.cupDiameter / 1000) / 2, 2);
-    const vacuum = 74000;
+    let vacuum;
+    if (gripper.model === "ZXP7") {
+      vacuum = 84000; // -84 kPa
+    } else {
+      vacuum = 74000; // ZXPE5
+    }
     const availableForce = area * vacuum * values.cups;
     const requiredForce = values.mass * 9.81 * values.safetyFactor;
     const marginPercent = ((availableForce - requiredForce) / requiredForce) * 100;
@@ -736,7 +741,6 @@ function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
       if (isElectricGripper(gripper)) detailLabel = gripper.mounting === "standard" ? "Montagem Standard" : "Montagem Longitudinal";
       if (isVacuumGripper(gripper)) detailLabel = `${gripper.size} • ejetores: ${gripper.ejectors.join(", ")}`;
       if (isElectricVacuumGripper(gripper)) detailLabel = `${gripper.maxWorkLoad} kg máx • ${gripper.maxVacuum} kPa • ${gripper.flowRate} L/min`;
-      if (gripper.type === "vacuo_modular") detailLabel = `${gripper.maxWorkLoad} kg máx • ${gripper.maxVacuum} kPa • ${gripper.flowRate} L/min`;
 
       return `
         <button type="button" class="${classes.join(" ")}" data-model="${gripper.model}" ${isCompatible ? "" : 'disabled aria-disabled="true"'}>
@@ -746,7 +750,7 @@ function renderCards(allTypeGrippers, compatibleGrippers, bestModel) {
           ${bestModel === gripper.model ? '<span class="badge">Melhor opção</span>' : ""}
           <div class="card-body">
             <p>${detailLabel}</p>
-            <p>${isVacuumGripper(gripper) ? "Sistema a vácuo ZGS" : isElectricVacuumGripper(gripper) ? "Sistema a vácuo elétrico ZXPE5" : isVacuumModularGripper(gripper) ? "Sistema a vácuo modular ZXP7" : isMagneticGripper(gripper) || isElectricGripper(gripper) ? "Garras em paralelo: Sim" : `Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}`}</p>
+            <p>${isVacuumGripper(gripper) ? "Sistema a vácuo ZGS" : isElectricVacuumGripper(gripper) ? "Sistema a vácuo (ZXPE5 / ZXP7)" : isVacuumModularGripper(gripper) ? "Sistema a vácuo modular ZXP7" : isMagneticGripper(gripper) || isElectricGripper(gripper) ? "Garras em paralelo: Sim" : `Paralelo: ${gripper.allows_parallel ? "Sim" : "Não"}`}</p>
           </div>
         </button>`;
     })
@@ -1185,8 +1189,15 @@ function updateUI(options = {}) {
     smcWarningEl.textContent = "SMC recomenda entre 5x e 10x o peso da peça";
     smcWarningEl.classList.remove("is-hidden");
   } else if (isVacuumElectric && values.mass > 5) {
-    smcWarningEl.textContent = "ZXPE5 excede carga máxima recomendada (5 kg)";
-    smcWarningEl.classList.remove("is-hidden");
+    if (selectedGripper?.model === "ZXP7" && values.mass > 7) {
+      smcWarningEl.textContent = "ZXP7 excede carga máxima recomendada (7 kg)";
+      smcWarningEl.classList.remove("is-hidden");
+    } else if (selectedGripper?.model !== "ZXP7" && values.mass > 5) {
+      smcWarningEl.textContent = "ZXPE5 excede carga máxima recomendada (5 kg)";
+      smcWarningEl.classList.remove("is-hidden");
+    } else {
+      smcWarningEl.classList.add("is-hidden");
+    }
   } else if (isVacuumModular && values.mass > 7) {
     smcWarningEl.textContent = "ZXP7 excede carga máxima recomendada (7 kg)";
     smcWarningEl.classList.remove("is-hidden");
