@@ -48,7 +48,7 @@
             <button type="button" class="technology-card" data-type="pneumatica">Pneumática</button>
             <button type="button" class="technology-card" data-type="magnetica">Magnética</button>
             <button type="button" class="technology-card" data-type="vacuo">Vácuo (ZGS)</button>
-            <button type="button" class="technology-card" data-type="vacuo_eletrico">Vácuo (ZXPE5 / ZXP7)</button>
+            <button type="button" class="technology-card" data-type="vacuo_eletrico">Vácuo Elétrico (ZXPE5)</button>
             <button type="button" class="technology-card" data-type="vacuo_zxp7">Vácuo (ZXP7)</button>
           </div>
           <label>
@@ -58,7 +58,7 @@
               <option value="pneumatica">Pneumática</option>
               <option value="magnetica">Magnética</option>
               <option value="vacuo">Vácuo (ZGS)</option>
-              <option value="vacuo_eletrico">Vácuo (ZXPE5 / ZXP7)</option>
+              <option value="vacuo_eletrico">Vácuo Elétrico (ZXPE5)</option>
               <option value="vacuo_zxp7">Vácuo (ZXP7)</option>
             </select>
           </label>
@@ -162,6 +162,10 @@
             <label id="vacuumPressureField" class="is-hidden">
               Pressão de alimentação (MPa)
               <input id="vacuumPressure" type="number" min="0.3" max="0.55" step="0.01" value="0.5" />
+            </label>
+            <label id="vacuumPressureFixedField" class="is-hidden">
+              Máxima pressão de vácuo (kPa)
+              <input id="vacuumPressureFixed" type="number" value="-74" readonly disabled />
             </label>
             <p id="vacuumNote" class="vacuum-note is-hidden">
               Valores baseados em condições padrão de medição da SMC, com a bomba operando continuamente. Podem variar conforme pressão atmosférica, altitude e método de medição.
