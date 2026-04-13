@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--driver", default="dh_modbus", help="Driver a utilizar (dh_modbus, smc_lehr)")
     parser.add_argument("--port", default="COM1", help="Porta serial (ex: COM3, /dev/ttyUSB0)")
     parser.add_argument("--slave-id", default=1, type=int, help="Slave ID Modbus")
+    parser.add_argument("--baudrate", default=115200, type=int, help="Baudrate RS485")
+    parser.add_argument("--timeout", default=0.2, type=float, help="Timeout Modbus/serial em segundos")
     return parser.parse_args()
 
 
@@ -31,7 +33,7 @@ def create_driver(args: argparse.Namespace):
     registry = build_registry()
     driver_cls = registry.get(args.driver)
     if args.driver == "dh_modbus":
-        return driver_cls(port=args.port, slave_id=args.slave_id)
+        return driver_cls(port=args.port, slave_id=args.slave_id, baudrate=args.baudrate, timeout=args.timeout)
     return driver_cls()
 
 
