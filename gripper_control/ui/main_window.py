@@ -240,3 +240,12 @@ class MainWindow(QMainWindow):
     def _show_error(self, message: str) -> None:
         self.logger.error(message)
         QMessageBox.critical(self, "Erro", message)
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        """Garante liberação da conexão serial ao fechar a UI."""
+        try:
+            if self.controller.driver.is_connected:
+                self.controller.driver.disconnect()
+        except Exception as exc:
+            self.logger.warning("Erro ao desconectar no encerramento: %s", exc)
+        super().closeEvent(event)

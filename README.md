@@ -1,41 +1,93 @@
-# SMC Gripper Engineering Web Configurator
+# Universal Industrial Gripper Control (Python)
 
-Local web app to validate gripping force calculations across multiple gripper models using a JSON-based model database.
+Aplicação desktop em **Python 3.10+** para controle universal de garras elétricas industriais via **RS485 / Modbus RTU**, com arquitetura modular para expansão de drivers.
 
-## Tech
+## Recursos
 
-- HTML
-- CSS
-- Vanilla JavaScript
-- Chart.js (CDN)
-- JSON model dataset (`grippers.json`)
+- Interface universal de driver (`GripperBase`) com operações padrão:
+  - conectar / desconectar
+  - inicializar
+  - abrir / fechar / parar
+  - set de posição, força e velocidade
+  - leitura de status
+- Driver funcional para **DH Robotics (Modbus RTU)**
+- Comunicação serial dedicada (`SerialRS485`) com retry e logs
+- UI moderna em **PyQt5** com:
+  - sliders de posição, força e velocidade
+  - botões de comando (Connect, Initialize, Open, Close, Stop)
+  - indicador de status por cor (verde, azul, vermelho)
+  - gráfico simples de tendência da posição
+- Logging centralizado em arquivo e console
+- Arquitetura plugável para novos drivers (ex.: placeholder `SMCLEHRGripper`)
 
-## What it does
+## Estrutura
 
-- Loads multiple grippers from JSON with these fields:
-  - `model`
-  - `fingers`
-  - `allows_parallel`
-  - `gripping_force_external_per_finger`
-  - `gripping_force_internal_per_finger`
-  - `reference_pressure`
-- Calculates required force:
-  - `F_required = safety_factor × (mass × 9.81 / friction)`
-- Calculates available force:
-  - `F_available = force_per_finger × number_of_fingers × pressure_ratio × number_of_grippers`
-- Enforces 3-finger gripper rule:
-  - forced `number_of_grippers = 1`
-  - parallel selection disabled
-- Automatically recommends best gripper:
-  - filters SAFE options
-  - sorts by lowest excess force
-  - highlights best option in cards and table
-- Displays a comparison table of all valid grippers.
-
-## Run locally
-
-```bash
-python3 -m http.server 8000
+```text
+gripper_control/
+├── main.py
+├── core/
+│   ├── gripper_base.py
+│   └── models.py
+├── drivers/
+│   ├── dh_modbus.py
+│   └── smc_lehr.py
+├── communication/
+│   └── serial_rs485.py
+├── ui/
+│   └── main_window.py
+└── utils/
+    ├── crc16.py
+    └── logger.py
 ```
 
-Open: `http://localhost:8000`
+## Dependências
+
+Instale com:
+
+```bash
+pip install pyserial pymodbus PyQt5
+```
+
+## Execução
+
+### Driver DH Modbus
+
+```bash
+python -m gripper_control.main --driver dh_modbus --port COM3 --slave-id 1 --baudrate 115200 --timeout 0.2
+```
+
+No Linux, exemplo de porta:
+
+```bash
+python -m gripper_control.main --driver dh_modbus --port /dev/ttyUSB0
+```
+
+### Driver placeholder SMC LEHR
+
+```bash
+python -m gripper_control.main --driver smc_lehr
+```
+
+> O driver SMC LEHR está preparado como extensão futura e ainda não implementa protocolo real.
+
+## Logs
+
+Os logs são gravados em:
+
+```text
+logs/gripper_control.log
+```
+
+Inclui:
+
+- INFO/WARNING/ERROR
+- comandos e respostas seriais/modbus
+- eventos de conexão/reconexão
+
+## Expansão para novos drivers
+
+1. Crie um novo arquivo em `gripper_control/drivers/`.
+2. Herde de `GripperBase`.
+3. Implemente os métodos abstratos.
+4. Registre no `build_registry()` em `main.py`.
+
